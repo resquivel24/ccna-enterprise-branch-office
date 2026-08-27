@@ -1,0 +1,374 @@
+================================================================
+CCNA Enterprise Branch Office Lab
+OSPFv2 Verification
+Devices: R1, DSW1, and DSW2
+================================================================
+
+PURPOSE
+-------
+
+This verification demonstrates OSPFv2 operation between the
+enterprise edge router R1 and the two Layer 3 distribution switches,
+DSW1 and DSW2.
+
+The lab uses OSPF process 1 and Area 0.
+
+OSPF provides dynamic IPv4 route exchange between R1 and the
+distribution layer.
+
+The user VLAN interfaces on DSW1 and DSW2 are configured as passive
+interfaces. This allows their connected IPv4 networks to be
+advertised into OSPF without attempting to form OSPF neighbor
+relationships with end hosts.
+
+
+================================================================
+EXPECTED OSPF TOPOLOGY
+================================================================
+
+                         R1
+                   Router ID 1.1.1.1
+                    /             \
+                   /               \
+          10.0.1.128/30       10.0.1.132/30
+                 /                   \
+              DSW1                   DSW2
+        Router ID 10.0.1.137   Router ID 10.0.1.138
+
+DSW1 and DSW2 advertise the enterprise VLAN networks toward R1.
+
+R1 advertises its connected infrastructure and server-side networks
+toward both distribution switches.
+
+
+================================================================
+R1 - SHOW IP OSPF NEIGHBOR
+================================================================
+
+R1#show ip ospf neighbor
+
+Neighbor ID     Pri   State           Dead Time   Address         Interface
+10.0.1.138        1   FULL/DR         00:00:37    10.0.1.134      GigabitEthernet2
+10.0.1.137        1   FULL/DR         00:00:38    10.0.1.130      GigabitEthernet1
+
+
+================================================================
+R1 - SHOW IP ROUTE OSPF
+================================================================
+
+R1#show ip route ospf
+
+Gateway of last resort is 192.168.1.1 to network 0.0.0.0
+
+      10.0.0.0/8 is variably subnetted, 15 subnets, 4 masks
+
+O        10.0.1.0/27 [110/2] via 10.0.1.134, GigabitEthernet2
+                     [110/2] via 10.0.1.130, GigabitEthernet1
+
+O        10.0.1.32/27 [110/2] via 10.0.1.134, GigabitEthernet2
+                      [110/2] via 10.0.1.130, GigabitEthernet1
+
+O        10.0.1.64/27 [110/2] via 10.0.1.134, GigabitEthernet2
+                      [110/2] via 10.0.1.130, GigabitEthernet1
+
+O        10.0.1.96/27 [110/2] via 10.0.1.134, GigabitEthernet2
+                      [110/2] via 10.0.1.130, GigabitEthernet1
+
+O        10.0.1.136/30 [110/2] via 10.0.1.134, GigabitEthernet2
+                       [110/2] via 10.0.1.130, GigabitEthernet1
+
+
+================================================================
+R1 OSPF ROUTE ANALYSIS
+================================================================
+
+R1 dynamically learns the following enterprise networks:
+
+10.0.1.0/27
+  VLAN 10 - Engineering
+
+10.0.1.32/27
+  VLAN 20 - Human Resources
+
+10.0.1.64/27
+  VLAN 30 - Sales
+
+10.0.1.96/27
+  VLAN 99 - Management
+
+10.0.1.136/30
+  Distribution transit network
+
+Each listed route is installed through both DSW1 and DSW2.
+
+Example:
+
+O 10.0.1.0/27 [110/2]
+  via 10.0.1.134 - DSW2
+  via 10.0.1.130 - DSW1
+
+Both paths have an OSPF metric of 2.
+
+This demonstrates equal-cost OSPF route installation toward the
+redundant distribution layer.
+
+
+================================================================
+DSW1 - SHOW IP OSPF NEIGHBOR
+================================================================
+
+DSW1#show ip ospf neighbor
+
+Neighbor ID     Pri   State           Dead Time   Address         Interface
+1.1.1.1           1   FULL/BDR        00:00:34    10.0.1.129      GigabitEthernet1/0
+
+
+================================================================
+DSW1 - SHOW IP ROUTE OSPF
+================================================================
+
+DSW1#show ip route ospf
+
+Gateway of last resort is 10.0.1.129 to network 0.0.0.0
+
+      10.0.0.0/8 is variably subnetted, 16 subnets, 4 masks
+
+O        10.0.1.132/30 [110/2] via 10.0.1.129, GigabitEthernet1/0
+O        10.0.1.140/30 [110/2] via 10.0.1.129, GigabitEthernet1/0
+O        10.0.2.0/24 [110/2] via 10.0.1.129, GigabitEthernet1/0
+O        10.0.3.0/24 [110/2] via 10.0.1.129, GigabitEthernet1/0
+
+
+================================================================
+DSW1 OSPF ROUTE ANALYSIS
+================================================================
+
+DSW1 dynamically learns the following networks from R1:
+
+10.0.1.132/30
+  R1-to-DSW2 routed transit network
+
+10.0.1.140/30
+  R1-to-SW5 management transit network
+
+10.0.2.0/24
+  DHCP/DNS server network
+
+10.0.3.0/24
+  Web/FTP server network
+
+All four routes use R1 at 10.0.1.129 as the next hop.
+
+
+================================================================
+DSW2 - SHOW IP OSPF NEIGHBOR
+================================================================
+
+DSW2#show ip ospf neighbor
+
+Neighbor ID     Pri   State           Dead Time   Address         Interface
+1.1.1.1           1   FULL/BDR        00:00:37    10.0.1.133      GigabitEthernet1/0
+
+
+================================================================
+DSW2 - SHOW IP ROUTE OSPF
+================================================================
+
+DSW2#show ip route ospf
+
+Gateway of last resort is 10.0.1.133 to network 0.0.0.0
+
+      10.0.0.0/8 is variably subnetted, 16 subnets, 4 masks
+
+O        10.0.1.128/30 [110/2] via 10.0.1.133, GigabitEthernet1/0
+O        10.0.1.140/30 [110/2] via 10.0.1.133, GigabitEthernet1/0
+O        10.0.2.0/24 [110/2] via 10.0.1.133, GigabitEthernet1/0
+O        10.0.3.0/24 [110/2] via 10.0.1.133, GigabitEthernet1/0
+
+
+================================================================
+DSW2 OSPF ROUTE ANALYSIS
+================================================================
+
+DSW2 dynamically learns the following networks from R1:
+
+10.0.1.128/30
+  R1-to-DSW1 routed transit network
+
+10.0.1.140/30
+  R1-to-SW5 management transit network
+
+10.0.2.0/24
+  DHCP/DNS server network
+
+10.0.3.0/24
+  Web/FTP server network
+
+All four routes use R1 at 10.0.1.133 as the next hop.
+
+
+================================================================
+OSPF NEIGHBOR RELATIONSHIPS
+================================================================
+
+R1 <-> DSW1
+------------
+
+R1 interface:
+  GigabitEthernet1
+  10.0.1.129/30
+
+DSW1 interface:
+  GigabitEthernet1/0
+  10.0.1.130/30
+
+OSPF state:
+  FULL
+
+R1 sees DSW1 as:
+  FULL/DR
+
+DSW1 sees R1 as:
+  FULL/BDR
+
+
+R1 <-> DSW2
+------------
+
+R1 interface:
+  GigabitEthernet2
+  10.0.1.133/30
+
+DSW2 interface:
+  GigabitEthernet1/0
+  10.0.1.134/30
+
+OSPF state:
+  FULL
+
+R1 sees DSW2 as:
+  FULL/DR
+
+DSW2 sees R1 as:
+  FULL/BDR
+
+
+================================================================
+OSPF DR / BDR OBSERVATION
+================================================================
+
+The R1-to-distribution links are Ethernet interfaces.
+
+OSPF therefore uses the broadcast network type by default.
+
+Even though each transit segment contains only two OSPF routers,
+OSPF still performs DR/BDR election on the Ethernet segment.
+
+This explains the observed states:
+
+R1:
+  DSW1 -> FULL/DR
+  DSW2 -> FULL/DR
+
+DSW1:
+  R1 -> FULL/BDR
+
+DSW2:
+  R1 -> FULL/BDR
+
+The FULL state confirms that the OSPF databases have synchronized
+successfully between the neighbors.
+
+
+================================================================
+PASSIVE INTERFACE DESIGN
+================================================================
+
+The distribution-switch OSPF configuration includes passive
+interfaces for the enterprise VLAN SVIs.
+
+These interfaces advertise their connected networks into OSPF while
+preventing OSPF Hello packets and neighbor formation on user-facing
+VLANs.
+
+The distribution transit SVI, VLAN 40, is also configured as passive.
+
+As a result:
+
+  DSW1 and DSW2 do not form an OSPF neighbor relationship directly
+  with each other across VLAN 40.
+
+However:
+
+  10.0.1.136/30 remains advertised as an OSPF-connected network.
+
+R1 therefore learns the 10.0.1.136/30 network from both distribution
+switches.
+
+
+================================================================
+REDUNDANT ROUTING OBSERVATION
+================================================================
+
+R1 installs equal-cost OSPF routes through both DSW1 and DSW2 for:
+
+  10.0.1.0/27
+  10.0.1.32/27
+  10.0.1.64/27
+  10.0.1.96/27
+  10.0.1.136/30
+
+For the departmental VLANs, the routing table contains two next hops:
+
+  via DSW1 - 10.0.1.130
+  via DSW2 - 10.0.1.134
+
+Both paths have:
+
+  Administrative Distance: 110
+  OSPF Metric:             2
+
+This verifies equal-cost route installation across the redundant
+distribution layer.
+
+
+================================================================
+VERIFICATION RESULTS
+================================================================
+
+PASS
+
+The OSPF verification confirms:
+
+  - R1 has a FULL OSPF adjacency with DSW1.
+  - R1 has a FULL OSPF adjacency with DSW2.
+  - DSW1 has a FULL OSPF adjacency with R1.
+  - DSW2 has a FULL OSPF adjacency with R1.
+  - Enterprise VLAN networks are dynamically advertised toward R1.
+  - Server networks are dynamically advertised toward both
+    distribution switches.
+  - R1 installs equal-cost routes through DSW1 and DSW2.
+  - Passive interfaces prevent unnecessary OSPF neighbor formation
+    on user-facing VLANs.
+  - The OSPF control plane is operational across the routed
+    enterprise infrastructure.
+
+
+================================================================
+CONCLUSION
+================================================================
+
+OSPFv2 Area 0 is operating successfully between the enterprise edge
+router and the redundant distribution layer.
+
+The routing tables demonstrate dynamic exchange of enterprise,
+transit, and server-network routes.
+
+The dual distribution design provides R1 with two equal-cost OSPF
+paths toward the enterprise VLAN networks while each distribution
+switch dynamically learns the remote infrastructure and server
+networks through R1.
+
+================================================================
+END OF OSPF VERIFICATION
+================================================================

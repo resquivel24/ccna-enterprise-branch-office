@@ -1,0 +1,752 @@
+CCNA ENTERPRISE BRANCH OFFICE
+IPv6 VERIFICATION EVIDENCE
+========================================
+
+Purpose
+-------
+Verify IPv6 operation across the enterprise branch topology, including:
+
+- IPv6 addressing
+- Static IPv6 routing
+- Neighbor Discovery
+- SLAAC
+- Router Advertisements
+- HSRPv2 for IPv6
+- IPv6 inter-VLAN routing
+- Dual-stack first-hop redundancy
+- HSRP/STP alignment
+
+
+========================================
+1. IPv6 ADDRESSING DESIGN
+========================================
+
+User VLAN IPv6 prefixes:
+
+VLAN 10
+Prefix: 2001:DB8:10::/64
+
+DSW1:
+2001:DB8:10::1/64
+
+DSW2:
+2001:DB8:10::2/64
+
+HSRP Global Virtual IPv6:
+2001:DB8:10::3/64
+
+
+VLAN 20
+Prefix: 2001:DB8:20::/64
+
+DSW1:
+2001:DB8:20::1/64
+
+DSW2:
+2001:DB8:20::2/64
+
+HSRP Global Virtual IPv6:
+2001:DB8:20::3/64
+
+
+VLAN 30
+Prefix: 2001:DB8:30::/64
+
+DSW1:
+2001:DB8:30::1/64
+
+DSW2:
+2001:DB8:30::2/64
+
+HSRP Global Virtual IPv6:
+2001:DB8:30::3/64
+
+
+VLAN 99
+Prefix: 2001:DB8:99::/64
+
+DSW1:
+2001:DB8:99::1/64
+
+DSW2:
+2001:DB8:99::2/64
+
+HSRP Global Virtual IPv6:
+2001:DB8:99::3/64
+
+
+IPv6 routed transit links:
+
+R1 <-> DSW1
+Network:
+2001:DB8:1001::/64
+
+R1 Gi1:
+2001:DB8:1001::1/64
+
+DSW1 Gi1/0:
+2001:DB8:1001::2/64
+
+
+R1 <-> DSW2
+Network:
+2001:DB8:1001:1::/64
+
+R1 Gi2:
+2001:DB8:1001:1::1/64
+
+DSW2 Gi1/0:
+2001:DB8:1001:1::2/64
+
+
+========================================
+2. IPv6 ROUTING
+========================================
+
+R1 uses static IPv6 routes toward the user VLANs.
+
+Configured routes:
+
+ipv6 route 2001:DB8:10::/64 2001:DB8:1001::2
+ipv6 route 2001:DB8:20::/64 2001:DB8:1001:1::2
+ipv6 route 2001:DB8:30::/64 2001:DB8:1001::2
+ipv6 route 2001:DB8:99::/64 2001:DB8:1001:1::2
+
+
+DSW1 default IPv6 route:
+
+ipv6 route ::/0 2001:DB8:1001::1
+
+
+DSW2 default IPv6 route:
+
+ipv6 route ::/0 2001:DB8:1001:1::1
+
+
+Observed R1 IPv6 interfaces:
+
+Gi1
+Link-local:
+FE80::EA5:19FF:FEA3:0
+
+Global:
+2001:DB8:1001::1/64
+
+
+Gi2
+Link-local:
+FE80::EA5:19FF:FEA3:1
+
+Global:
+2001:DB8:1001:1::1/64
+
+
+Observed DSW1 transit interface:
+
+Gi1/0
+Global:
+2001:DB8:1001::2/64
+
+
+Observed DSW2 transit interface:
+
+Gi1/0
+Global:
+2001:DB8:1001:1::2/64
+
+
+Result:
+PASS
+
+IPv6 routed connectivity exists between R1 and both distribution
+switches, with static routing providing reachability to all four
+user VLAN IPv6 prefixes.
+
+
+========================================
+3. IPv6 NEIGHBOR DISCOVERY
+========================================
+
+R1 successfully learned the IPv6 neighbors for both distribution
+switches.
+
+R1 -> DSW1:
+
+2001:DB8:1001::2
+MAC: 0c67.512b.0004
+Interface: Gi1
+
+DSW1 link-local:
+FE80::E67:51FF:FE2B:4
+
+
+R1 -> DSW2:
+
+2001:DB8:1001:1::2
+MAC: 0cd1.bc71.0004
+Interface: Gi2
+
+DSW2 link-local:
+FE80::ED1:BCFF:FE71:4
+
+
+The distribution switches also learned IPv6 end-host neighbors on
+the user VLANs.
+
+Examples observed included hosts in:
+
+- VLAN 10
+- VLAN 20
+- VLAN 30
+- VLAN 99
+
+
+Result:
+PASS
+
+IPv6 Neighbor Discovery is functioning across routed and switched
+segments.
+
+
+========================================
+4. FINAL HSRPv2 DESIGN
+========================================
+
+The original HSRP implementation used inconsistent group numbering
+between IPv4 and IPv6 and did not consistently align the IPv4 and
+IPv6 Active gateway with the STP root.
+
+The HSRP design was rebuilt using a predictable dual-stack
+convention.
+
+Final convention:
+
+IPv4 HSRP group = VLAN ID
+
+IPv6 HSRP group = VLAN ID + 100
+
+
+Final HSRP design:
+
+VLAN 10
+IPv4 group: 10
+IPv6 group: 110
+Active: DSW1
+Standby: DSW2
+STP Root: DSW1
+
+
+VLAN 20
+IPv4 group: 20
+IPv6 group: 120
+Active: DSW2
+Standby: DSW1
+STP Root: DSW2
+
+
+VLAN 30
+IPv4 group: 30
+IPv6 group: 130
+Active: DSW1
+Standby: DSW2
+STP Root: DSW1
+
+
+VLAN 99
+IPv4 group: 99
+IPv6 group: 199
+Active: DSW2
+Standby: DSW1
+STP Root: DSW2
+
+
+This provides a predictable relationship between:
+
+- VLAN number
+- IPv4 HSRP group
+- IPv6 HSRP group
+- Active default gateway
+- STP root bridge
+
+
+========================================
+5. FINAL HSRP STATE
+========================================
+
+DSW1 final roles:
+
+VLAN 10
+IPv4 group 10:
+Active
+Priority 105
+Preempt enabled
+
+IPv6 group 110:
+Active
+Priority 105
+
+
+VLAN 20
+IPv4 group 20:
+Standby
+Priority 100
+
+IPv6 group 120:
+Standby
+Priority 100
+
+
+VLAN 30
+IPv4 group 30:
+Active
+Priority 105
+Preempt enabled
+
+IPv6 group 130:
+Active
+Priority 105
+Preempt enabled
+
+
+VLAN 99
+IPv4 group 99:
+Standby
+Priority 100
+
+IPv6 group 199:
+Standby
+Priority 100
+
+
+DSW2 final roles:
+
+VLAN 10
+IPv4 group 10:
+Standby
+Priority 100
+
+IPv6 group 110:
+Standby
+Priority 100
+
+
+VLAN 20
+IPv4 group 20:
+Active
+Priority 105
+Preempt enabled
+
+IPv6 group 120:
+Active
+Priority 105
+Preempt enabled
+
+
+VLAN 30
+IPv4 group 30:
+Standby
+Priority 100
+
+IPv6 group 130:
+Standby
+Priority 100
+
+
+VLAN 99
+IPv4 group 99:
+Active
+Priority 105
+Preempt enabled
+
+IPv6 group 199:
+Active
+Priority 105
+Preempt enabled
+
+
+Result:
+PASS
+
+Both address families now follow the intended gateway-placement
+policy.
+
+
+========================================
+6. HSRPv2 IPv6 VIRTUAL LINK-LOCAL GATEWAYS
+========================================
+
+The resulting HSRPv2 IPv6 virtual link-local gateways are:
+
+VLAN 10
+IPv6 HSRP group 110
+Virtual link-local:
+FE80::5:73FF:FEA0:6E
+
+
+VLAN 20
+IPv6 HSRP group 120
+Virtual link-local:
+FE80::5:73FF:FEA0:78
+
+
+VLAN 30
+IPv6 HSRP group 130
+Virtual link-local:
+FE80::5:73FF:FEA0:82
+
+
+VLAN 99
+IPv6 HSRP group 199
+Virtual link-local:
+FE80::5:73FF:FEA0:C7
+
+
+The hexadecimal suffix corresponds to the HSRP group number:
+
+110 decimal = 0x6E
+120 decimal = 0x78
+130 decimal = 0x82
+199 decimal = 0xC7
+
+
+Result:
+PASS
+
+
+========================================
+7. SLAAC AND ROUTER ADVERTISEMENT VERIFICATION
+========================================
+
+Ubuntu end hosts successfully learned their IPv6 prefix and default
+gateway automatically.
+
+PC1 - VLAN 10
+
+IPv6 route:
+
+2001:db8:10::/64 dev ens3 proto ra metric 100 pref medium
+fe80::/64 dev ens3 proto kernel metric 1024 pref medium
+default via fe80::5:73ff:fea0:6e dev ens3 proto ra metric 20100 pref medium
+
+
+PC4 - VLAN 20
+
+IPv6 route:
+
+2001:db8:20::/64 dev ens3 proto ra metric 100 pref medium
+fe80::/64 dev ens3 proto kernel metric 1024 pref medium
+default via fe80::5:73ff:fea0:78 dev ens3 proto ra metric 20100 pref medium
+
+
+PC5 - VLAN 30
+
+IPv6 route:
+
+2001:db8:30::/64 dev ens3 proto ra metric 100 pref medium
+fe80::/64 dev ens3 proto kernel metric 1024 pref medium
+default via fe80::5:73ff:fea0:82 dev ens3 proto ra metric 20100 pref medium
+
+
+PC7 - VLAN 99
+
+IPv6 route:
+
+2001:db8:99::/64 dev ens3 proto ra metric 100 pref medium
+fe80::/64 dev ens3 proto kernel metric 1024 pref medium
+default via fe80::5:73ff:fea0:c7 dev ens3 proto ra metric 20100 pref medium
+
+
+Result:
+PASS
+
+All tested hosts learned:
+
+- Their local /64 IPv6 prefix
+- A link-local route
+- The correct HSRPv2 virtual link-local default gateway
+
+No static IPv6 default route was required on the clients.
+
+
+========================================
+8. IPv6 INTER-VLAN CONNECTIVITY
+========================================
+
+Inter-VLAN IPv6 forwarding was tested from hosts in all four VLANs.
+
+
+TEST 1
+------
+
+Source:
+PC1 - VLAN 10
+
+Destination:
+DSW2 VLAN 20 SVI
+
+Command:
+
+ping -6 -c 5 2001:db8:20::2
+
+Result:
+
+5 packets transmitted
+5 packets received
+0% packet loss
+
+PASS
+
+
+TEST 2
+------
+
+Source:
+PC4 - VLAN 20
+
+Destination:
+DSW1 VLAN 30 SVI
+
+Command:
+
+ping -6 -c 5 2001:db8:30::1
+
+Result:
+
+5 packets transmitted
+5 packets received
+0% packet loss
+
+PASS
+
+
+TEST 3
+------
+
+Source:
+PC5 - VLAN 30
+
+Destination:
+DSW2 VLAN 99 SVI
+
+Command:
+
+ping -6 -c 5 2001:db8:99::2
+
+Result:
+
+5 packets transmitted
+5 packets received
+0% packet loss
+
+PASS
+
+
+TEST 4
+------
+
+Source:
+PC7 - VLAN 99
+
+Destination:
+DSW1 VLAN 10 SVI
+
+Command:
+
+ping -6 -c 5 2001:db8:10::1
+
+Result:
+
+5 packets transmitted
+5 packets received
+0% packet loss
+
+PASS
+
+
+Overall inter-VLAN IPv6 result:
+
+PASS
+
+
+========================================
+9. TROUBLESHOOTING FINDING
+========================================
+
+During the initial IPv6 HSRP verification, inter-VLAN forwarding
+failed for some hosts.
+
+The initial configuration used different and inconsistent HSRP
+group numbering between VLANs and address families.
+
+Examples from the original configuration included:
+
+VLAN 10
+IPv4 group 1
+IPv6 group 2
+
+VLAN 20
+IPv4 group 2
+IPv6 group 5
+
+VLAN 30
+IPv4 group 3
+IPv6 group 2
+
+VLAN 99
+IPv4 group 4
+IPv6 group 2
+
+
+The IPv4 and IPv6 Active gateway placement also differed on some
+VLANs.
+
+An initial troubleshooting hypothesis considered whether the
+behavior represented an IOSvL2/GNS3 HSRPv2 IPv6 forwarding
+limitation.
+
+That hypothesis was disproved through controlled testing.
+
+
+VLAN 10 was rebuilt first using:
+
+IPv4 group 10
+IPv6 group 110
+Active DSW1
+
+
+After rebuilding VLAN 10, a VLAN 10 host successfully reached:
+
+2001:DB8:20::2
+
+with:
+
+5 packets transmitted
+5 packets received
+0% packet loss
+
+
+VLAN 20 was then rebuilt using:
+
+IPv4 group 20
+IPv6 group 120
+Active DSW2
+
+
+After rebuilding VLAN 20, a VLAN 20 host successfully reached:
+
+2001:DB8:10::1
+
+with:
+
+5 packets transmitted
+5 packets received
+0% packet loss
+
+
+VLANs 30 and 99 were subsequently rebuilt using the same convention.
+
+Final inter-VLAN testing across all four VLANs succeeded.
+
+
+Conclusion from troubleshooting:
+
+The observed forwarding problem was NOT an inherent IOSvL2/GNS3
+HSRPv2 IPv6 forwarding limitation.
+
+The final standardized HSRP design restored successful IPv6
+inter-VLAN forwarding.
+
+
+========================================
+10. HSRP AND STP ALIGNMENT
+========================================
+
+The final design aligns the Layer 2 spanning-tree root with the
+preferred Layer 3 first-hop gateway.
+
+VLAN 10
+STP Root: DSW1
+IPv4 HSRP Active: DSW1
+IPv6 HSRP Active: DSW1
+
+
+VLAN 20
+STP Root: DSW2
+IPv4 HSRP Active: DSW2
+IPv6 HSRP Active: DSW2
+
+
+VLAN 30
+STP Root: DSW1
+IPv4 HSRP Active: DSW1
+IPv6 HSRP Active: DSW1
+
+
+VLAN 99
+STP Root: DSW2
+IPv4 HSRP Active: DSW2
+IPv6 HSRP Active: DSW2
+
+
+This prevents unnecessary Layer 2 forwarding toward one
+distribution switch followed by Layer 3 forwarding through the
+other distribution switch during normal operation.
+
+
+Result:
+PASS
+
+
+========================================
+11. FINAL IPv6 VERIFICATION SUMMARY
+========================================
+
+IPv6 Interface Addressing:
+PASS
+
+IPv6 Static Routing:
+PASS
+
+IPv6 Neighbor Discovery:
+PASS
+
+SLAAC:
+PASS
+
+Router Advertisements:
+PASS
+
+HSRPv2 IPv6 Control Plane:
+PASS
+
+HSRPv2 IPv6 Virtual Gateway Learning:
+PASS
+
+IPv6 Inter-VLAN Routing:
+PASS
+
+IPv6 Forwarding Through HSRP Virtual Gateway:
+PASS
+
+Dual-Stack HSRP Design:
+PASS
+
+HSRP/STP Alignment:
+PASS
+
+
+FINAL RESULT
+------------
+
+PASS
+
+The enterprise branch office successfully provides dual-stack
+first-hop redundancy and IPv6 inter-VLAN routing across VLANs
+10, 20, 30, and 99.
+
+The final HSRP implementation uses a predictable numbering
+convention and aligns the preferred IPv4 and IPv6 gateway with
+the spanning-tree root for each VLAN.
+
+This verification also documents the troubleshooting process that
+identified and corrected the original inconsistent HSRP design.

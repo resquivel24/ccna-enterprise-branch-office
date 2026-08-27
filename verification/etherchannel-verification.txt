@@ -1,0 +1,374 @@
+================================================================
+CCNA Enterprise Branch Office Lab
+EtherChannel / LACP Verification
+Devices: DSW1 and DSW2
+================================================================
+
+PURPOSE
+-------
+
+This verification demonstrates the Layer 2 EtherChannel operating
+between the two distribution switches, DSW1 and DSW2.
+
+Two physical Gigabit Ethernet interfaces are combined into
+Port-channel1 using the Link Aggregation Control Protocol (LACP).
+
+The EtherChannel provides increased aggregate bandwidth and link
+redundancy between the distribution switches.
+
+
+================================================================
+ETHERCHANNEL DESIGN
+================================================================
+
+                 DSW1                         DSW2
+
+             Gi0/3 ----------------------- Gi0/3
+                    \                     /
+                     \                   /
+                      === Port-channel1 ===
+                     /                   \
+                    /                     \
+             Gi1/2 ----------------------- Gi1/2
+
+
+Channel Group:
+  1
+
+Logical Interface:
+  Port-channel1
+
+Protocol:
+  LACP
+
+Physical Member Interfaces:
+  GigabitEthernet0/3
+  GigabitEthernet1/2
+
+EtherChannel Type:
+  Layer 2
+
+Aggregate Bandwidth:
+  2,000,000 Kbit/sec
+
+Port-channel1 is used as an 802.1Q trunk between DSW1 and DSW2.
+
+
+================================================================
+DSW1 - SHOW ETHERCHANNEL SUMMARY
+================================================================
+
+DSW1#show etherchannel summary
+
+Flags:  D - down        P - bundled in port-channel
+        I - stand-alone s - suspended
+        H - Hot-standby (LACP only)
+        R - Layer3      S - Layer2
+        U - in use      N - not in use, no aggregation
+        f - failed to allocate aggregator
+
+        M - not in use, minimum links not met
+        m - not in use, port not aggregated due to minimum links not met
+        u - unsuitable for bundling
+        w - waiting to be aggregated
+        d - default port
+
+        A - formed by Auto LAG
+
+
+Number of channel-groups in use: 1
+Number of aggregators:           1
+
+Group  Port-channel  Protocol    Ports
+------+-------------+-----------+-----------------------------------------------
+1      Po1(SU)         LACP      Gi0/3(P)    Gi1/2(P)
+
+
+================================================================
+DSW1 - SHOW INTERFACES PORT-CHANNEL 1
+================================================================
+
+DSW1#show interfaces port-channel 1
+
+Port-channel1 is up, line protocol is up (connected)
+  Hardware is EtherChannel, address is 0c67.512b.0003 (bia 0c67.512b.0003)
+  MTU 1500 bytes, BW 2000000 Kbit/sec, DLY 10 usec,
+     reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation ARPA, loopback not set
+  Keepalive set (10 sec)
+  ARP type: ARPA, ARP Timeout 04:00:00
+  Last input 00:00:01, output never, output hang never
+  Last clearing of "show interface" counters never
+  Input queue: 0/2000/0/0 (size/max/drops/flushes); Total output drops: 0
+  Queueing strategy: fifo
+  Output queue: 0/40 (size/max)
+  5 minute input rate 3000 bits/sec, 4 packets/sec
+  5 minute output rate 3000 bits/sec, 5 packets/sec
+     3298 packets input, 328994 bytes, 0 no buffer
+     Received 0 broadcasts (0 multicasts)
+     0 runts, 0 giants, 0 throttles
+     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored
+     0 input packets with dribble condition detected
+     4216 packets output, 427295 bytes, 0 underruns
+     0 output errors, 0 collisions, 0 interface resets
+     0 unknown protocol drops
+     0 babbles, 0 late collision, 0 deferred
+     0 lost carrier, 0 no carrier
+     0 output buffer failures, 0 output buffers swapped out
+
+
+================================================================
+DSW1 ANALYSIS
+================================================================
+
+The DSW1 EtherChannel summary reports:
+
+  Po1(SU)
+
+The flags indicate:
+
+  S = Layer 2 EtherChannel
+  U = EtherChannel is in use
+
+Both physical member interfaces report:
+
+  Gi0/3(P)
+  Gi1/2(P)
+
+The P flag indicates that both interfaces are successfully bundled
+into Port-channel1.
+
+The configured EtherChannel protocol is:
+
+  LACP
+
+The Port-channel1 interface reports:
+
+  Interface state:       up
+  Line protocol state:   up
+  Aggregate bandwidth:   2,000,000 Kbit/sec
+  Reliability:           255/255
+  Input errors:          0
+  CRC errors:            0
+  Output errors:         0
+  Collisions:            0
+
+DSW1 therefore considers both physical interfaces active members of
+the operational LACP bundle.
+
+
+================================================================
+DSW2 - SHOW ETHERCHANNEL SUMMARY
+================================================================
+
+DSW2#show etherchannel summary
+
+Flags:  D - down        P - bundled in port-channel
+        I - stand-alone s - suspended
+        H - Hot-standby (LACP only)
+        R - Layer3      S - Layer2
+        U - in use      N - not in use, no aggregation
+        f - failed to allocate aggregator
+
+        M - not in use, minimum links not met
+        m - not in use, port not aggregated due to minimum links not met
+        u - unsuitable for bundling
+        w - waiting to be aggregated
+        d - default port
+
+        A - formed by Auto LAG
+
+
+Number of channel-groups in use: 1
+Number of aggregators:           1
+
+Group  Port-channel  Protocol    Ports
+------+-------------+-----------+-----------------------------------------------
+1      Po1(SU)         LACP      Gi0/3(P)    Gi1/2(P)
+
+
+================================================================
+DSW2 - SHOW INTERFACES PORT-CHANNEL 1
+================================================================
+
+DSW2#show interfaces port-channel 1
+
+Port-channel1 is up, line protocol is up (connected)
+  Hardware is EtherChannel, address is 0cd1.bc71.0003 (bia 0cd1.bc71.0003)
+  MTU 1500 bytes, BW 2000000 Kbit/sec, DLY 10 usec,
+     reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation ARPA, loopback not set
+  Keepalive set (10 sec)
+  ARP type: ARPA, ARP Timeout 04:00:00
+  Last input 00:00:00, output never, output hang never
+  Last clearing of "show interface" counters never
+  Input queue: 0/2000/0/0 (size/max/drops/flushes); Total output drops: 0
+  Queueing strategy: fifo
+  Output queue: 0/40 (size/max)
+  5 minute input rate 3000 bits/sec, 4 packets/sec
+  5 minute output rate 2000 bits/sec, 3 packets/sec
+     3842 packets input, 368099 bytes, 0 no buffer
+     Received 0 broadcasts (0 multicasts)
+     0 runts, 0 giants, 0 throttles
+     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored
+     0 input packets with dribble condition detected
+     3239 packets output, 347478 bytes, 0 underruns
+     0 output errors, 0 collisions, 0 interface resets
+     0 unknown protocol drops
+     0 babbles, 0 late collision, 0 deferred
+     0 lost carrier, 0 no carrier
+     0 output buffer failures, 0 output buffers swapped out
+
+
+================================================================
+DSW2 ANALYSIS
+================================================================
+
+The DSW2 EtherChannel summary also reports:
+
+  Po1(SU)
+
+The flags indicate:
+
+  S = Layer 2 EtherChannel
+  U = EtherChannel is in use
+
+Both physical member interfaces report:
+
+  Gi0/3(P)
+  Gi1/2(P)
+
+Both interfaces are therefore successfully bundled into
+Port-channel1.
+
+The configured EtherChannel protocol is:
+
+  LACP
+
+The Port-channel1 interface reports:
+
+  Interface state:       up
+  Line protocol state:   up
+  Aggregate bandwidth:   2,000,000 Kbit/sec
+  Reliability:           255/255
+  Input errors:          0
+  CRC errors:            0
+  Output errors:         0
+  Collisions:            0
+
+
+================================================================
+LACP CONFIGURATION RELATIONSHIP
+================================================================
+
+The implemented configuration uses:
+
+DSW1:
+  channel-group 1 mode active
+
+DSW2:
+  channel-group 1 mode passive
+
+LACP active mode initiates LACP negotiation.
+
+LACP passive mode responds to received LACP negotiation messages.
+
+The active/passive combination successfully forms the EtherChannel,
+as confirmed by both switches reporting:
+
+  Po1(SU)
+  Gi0/3(P)
+  Gi1/2(P)
+
+
+================================================================
+BANDWIDTH VERIFICATION
+================================================================
+
+Each physical member is a Gigabit Ethernet interface.
+
+Physical links:
+
+  Gi0/3 = 1 Gbit/sec
+  Gi1/2 = 1 Gbit/sec
+
+Port-channel1 reports:
+
+  BW 2000000 Kbit/sec
+
+This represents an aggregate logical bandwidth of:
+
+  2 Gbit/sec
+
+EtherChannel distributes traffic flows across the member links
+according to the platform's EtherChannel load-balancing method.
+
+A single traffic flow is not necessarily transmitted at 2 Gbit/sec;
+the bundle provides aggregate capacity across multiple flows while
+also providing link redundancy.
+
+
+================================================================
+INTERFACE HEALTH
+================================================================
+
+DSW1 Port-channel1:
+
+  Input errors:      0
+  CRC errors:        0
+  Output errors:     0
+  Collisions:        0
+  Interface resets:  0
+
+DSW2 Port-channel1:
+
+  Input errors:      0
+  CRC errors:        0
+  Output errors:     0
+  Collisions:        0
+  Interface resets:  0
+
+No interface-level errors are present in the captured verification
+output.
+
+
+================================================================
+VERIFICATION RESULTS
+================================================================
+
+PASS
+
+EtherChannel verification confirms:
+
+  - Port-channel1 is operational on DSW1.
+  - Port-channel1 is operational on DSW2.
+  - Port-channel1 is a Layer 2 EtherChannel.
+  - LACP is the negotiation protocol.
+  - GigabitEthernet0/3 is bundled successfully.
+  - GigabitEthernet1/2 is bundled successfully.
+  - Both member links show the P bundled flag.
+  - The logical Port-channel interface is up/up on both switches.
+  - Aggregate bandwidth is reported as 2 Gbit/sec.
+  - No input, CRC, output, or collision errors are present.
+  - DSW1 active and DSW2 passive LACP modes successfully negotiate
+    the bundle.
+
+
+================================================================
+CONCLUSION
+================================================================
+
+The LACP EtherChannel between DSW1 and DSW2 is operating
+successfully.
+
+Two Gigabit Ethernet physical links have been combined into the
+single logical Port-channel1 interface.
+
+The bundle provides additional aggregate bandwidth and physical-link
+redundancy between the two distribution switches while allowing
+Spanning Tree to treat the EtherChannel as a single logical Layer 2
+connection.
+
+================================================================
+END OF ETHERCHANNEL VERIFICATION
+================================================================

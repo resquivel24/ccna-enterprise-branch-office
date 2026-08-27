@@ -1,0 +1,681 @@
+================================================================
+CCNA Enterprise Branch Office Lab
+Rapid PVST+ / Spanning Tree Verification
+Devices: DSW1 and DSW2
+================================================================
+
+PURPOSE
+-------
+
+This verification demonstrates Rapid PVST+ root-bridge placement
+across the redundant distribution layer.
+
+The network uses DSW1 and DSW2 as the primary Spanning Tree control
+points for the enterprise VLANs.
+
+Root-bridge responsibility is deliberately distributed between the
+two distribution switches instead of assigning every VLAN to the
+same root bridge.
+
+This provides practical verification of:
+
+  - Rapid PVST+ operation
+  - Root bridge election
+  - Bridge priority configuration
+  - Per-VLAN root selection
+  - Root port selection
+  - Designated port operation
+  - EtherChannel interaction with Spanning Tree
+
+
+================================================================
+EXPECTED ROOT-BRIDGE DISTRIBUTION
+================================================================
+
+VLAN 10 - Engineering
+  Root Bridge:      DSW1
+  Secondary:        DSW2
+
+VLAN 20 - Human Resources
+  Root Bridge:      DSW2
+  Secondary:        DSW1
+
+VLAN 30 - Sales
+  Root Bridge:      DSW1
+  Secondary:        DSW2
+
+VLAN 99 - Management
+  Root Bridge:      DSW2
+  Secondary:        DSW1
+
+VLAN 999 - Native VLAN
+  Root Bridge:      DSW1
+  Secondary:        DSW2
+
+
+================================================================
+CONFIGURED DISTRIBUTION-SWITCH PRIORITIES
+================================================================
+
+DSW1:
+
+  VLAN 10:   24576
+  VLAN 30:   24576
+  VLAN 999:  24576
+
+  VLAN 20:   28672
+  VLAN 99:   28672
+
+
+DSW2:
+
+  VLAN 10:   28672
+  VLAN 30:   28672
+  VLAN 999:  28672
+
+  VLAN 20:   20480
+  VLAN 99:   20480
+
+
+Lower Spanning Tree bridge priority values are preferred during
+root-bridge election.
+
+The configured priorities therefore intentionally make:
+
+  DSW1 preferred for VLANs 10, 30, and 999.
+
+  DSW2 preferred for VLANs 20 and 99.
+
+
+================================================================
+SYSTEM-ID EXTENSION
+================================================================
+
+Rapid PVST+ incorporates the VLAN ID into the displayed bridge
+priority using the extended system ID.
+
+For example:
+
+DSW1 VLAN 10:
+
+  Configured priority: 24576
+  VLAN ID:             10
+
+Displayed priority:
+
+  24576 + 10 = 24586
+
+
+DSW2 VLAN 20:
+
+  Configured priority: 20480
+  VLAN ID:             20
+
+Displayed priority:
+
+  20480 + 20 = 20500
+
+The displayed priorities in the operational output therefore differ
+slightly from the configured base priorities.
+
+
+================================================================
+DSW1 - VLAN 10
+================================================================
+
+DSW1#show spanning-tree vlan 10
+
+VLAN0010
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    24586
+             Address     0c67.512b.0000
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    24586  (priority 24576 sys-id-ext 10)
+             Address     0c67.512b.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Desg FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW1 reports:
+
+  This bridge is the root
+
+Therefore:
+
+  VLAN 10 Root Bridge = DSW1
+
+All listed DSW1 ports are Designated Forwarding ports.
+
+Port-channel1 is also a Designated Forwarding port because DSW1 is
+the root bridge for VLAN 10.
+
+
+================================================================
+DSW2 - VLAN 10
+================================================================
+
+DSW2#show spanning-tree vlan 10
+
+VLAN0010
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    24586
+             Address     0c67.512b.0000
+             Cost        3
+             Port        65 (Port-channel1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    28682  (priority 28672 sys-id-ext 10)
+             Address     0cd1.bc71.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Root FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW2 identifies the VLAN 10 root as:
+
+  MAC Address: 0c67.512b.0000
+
+This matches DSW1.
+
+DSW2 selects:
+
+  Port-channel1
+
+as its Root Port.
+
+Port-channel1 has:
+
+  Role: Root
+  State: Forwarding
+  Cost: 3
+
+
+================================================================
+DSW1 - VLAN 20
+================================================================
+
+DSW1#show spanning-tree vlan 20
+
+VLAN0020
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    20500
+             Address     0cd1.bc71.0000
+             Cost        3
+             Port        65 (Port-channel1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    28692  (priority 28672 sys-id-ext 20)
+             Address     0c67.512b.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Root FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW1 is not the VLAN 20 root.
+
+It identifies DSW2 as the root bridge and selects:
+
+  Port-channel1
+
+as the Root Port.
+
+
+================================================================
+DSW2 - VLAN 20
+================================================================
+
+DSW2#show spanning-tree vlan 20
+
+VLAN0020
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    20500
+             Address     0cd1.bc71.0000
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    20500  (priority 20480 sys-id-ext 20)
+             Address     0cd1.bc71.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Desg FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW2 reports:
+
+  This bridge is the root
+
+Therefore:
+
+  VLAN 20 Root Bridge = DSW2
+
+
+================================================================
+DSW1 - VLAN 30
+================================================================
+
+DSW1#show spanning-tree vlan 30
+
+VLAN0030
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    24606
+             Address     0c67.512b.0000
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    24606  (priority 24576 sys-id-ext 30)
+             Address     0c67.512b.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Desg FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW1 reports:
+
+  This bridge is the root
+
+Therefore:
+
+  VLAN 30 Root Bridge = DSW1
+
+
+================================================================
+DSW2 - VLAN 30
+================================================================
+
+DSW2#show spanning-tree vlan 30
+
+VLAN0030
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    24606
+             Address     0c67.512b.0000
+             Cost        3
+             Port        65 (Port-channel1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    28702  (priority 28672 sys-id-ext 30)
+             Address     0cd1.bc71.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Root FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW2 reaches the VLAN 30 root through:
+
+  Port-channel1
+
+Therefore:
+
+  VLAN 30 Root Bridge = DSW1
+
+
+================================================================
+DSW1 - VLAN 99
+================================================================
+
+DSW1#show spanning-tree vlan 99
+
+VLAN0099
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    20579
+             Address     0cd1.bc71.0000
+             Cost        3
+             Port        65 (Port-channel1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    28771  (priority 28672 sys-id-ext 99)
+             Address     0c67.512b.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Root FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW1 reaches the VLAN 99 root through:
+
+  Port-channel1
+
+Therefore:
+
+  VLAN 99 Root Bridge = DSW2
+
+
+================================================================
+DSW2 - VLAN 99
+================================================================
+
+DSW2#show spanning-tree vlan 99
+
+VLAN0099
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    20579
+             Address     0cd1.bc71.0000
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    20579  (priority 20480 sys-id-ext 99)
+             Address     0cd1.bc71.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Desg FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW2 reports:
+
+  This bridge is the root
+
+Therefore:
+
+  VLAN 99 Root Bridge = DSW2
+
+
+================================================================
+DSW1 - VLAN 999
+================================================================
+
+DSW1#show spanning-tree vlan 999
+
+VLAN0999
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    25575
+             Address     0c67.512b.0000
+             This bridge is the root
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    25575  (priority 24576 sys-id-ext 999)
+             Address     0c67.512b.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Desg FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW1 reports:
+
+  This bridge is the root
+
+Therefore:
+
+  VLAN 999 Root Bridge = DSW1
+
+
+================================================================
+DSW2 - VLAN 999
+================================================================
+
+DSW2#show spanning-tree vlan 999
+
+VLAN0999
+  Spanning tree enabled protocol rstp
+  Root ID    Priority    25575
+             Address     0c67.512b.0000
+             Cost        3
+             Port        65 (Port-channel1)
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+
+  Bridge ID  Priority    29671  (priority 28672 sys-id-ext 999)
+             Address     0cd1.bc71.0000
+             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec
+             Aging Time  300 sec
+
+Interface           Role Sts Cost      Prio.Nbr Type
+------------------- ---- --- --------- -------- --------------------------------
+Gi0/0               Desg FWD 4         128.1    P2p
+Gi0/1               Desg FWD 4         128.2    P2p
+Gi0/2               Desg FWD 4         128.3    P2p
+Gi1/1               Desg FWD 4         128.6    P2p
+Po1                 Root FWD 3         128.65   P2p
+
+
+ANALYSIS
+
+DSW2 reaches the VLAN 999 root through:
+
+  Port-channel1
+
+Therefore:
+
+  VLAN 999 Root Bridge = DSW1
+
+
+================================================================
+ROOT-BRIDGE SUMMARY
+================================================================
+
+VLAN       ROOT BRIDGE       SECONDARY DISTRIBUTION SWITCH
+----       -----------       -----------------------------
+10         DSW1              DSW2
+20         DSW2              DSW1
+30         DSW1              DSW2
+99         DSW2              DSW1
+999        DSW1              DSW2
+
+
+================================================================
+PORT-CHANNEL STP BEHAVIOR
+================================================================
+
+Port-channel1 appears as one logical interface in the Spanning Tree
+topology.
+
+When DSW1 is the root bridge:
+
+  DSW1:
+    Po1 = Designated Forwarding
+
+  DSW2:
+    Po1 = Root Forwarding
+
+This occurs for:
+
+  VLAN 10
+  VLAN 30
+  VLAN 999
+
+
+When DSW2 is the root bridge:
+
+  DSW2:
+    Po1 = Designated Forwarding
+
+  DSW1:
+    Po1 = Root Forwarding
+
+This occurs for:
+
+  VLAN 20
+  VLAN 99
+
+
+The physical EtherChannel member interfaces do not appear separately
+in this Spanning Tree output.
+
+Spanning Tree treats the LACP EtherChannel as the single logical:
+
+  Port-channel1
+
+interface.
+
+
+================================================================
+ROOT PATH COST
+================================================================
+
+On the non-root distribution switch, the root path uses:
+
+  Port-channel1
+
+with a cost of:
+
+  3
+
+Example:
+
+DSW2 VLAN 10:
+
+  Root ID Cost: 3
+  Root Port:    Port-channel1
+
+DSW1 VLAN 20:
+
+  Root ID Cost: 3
+  Root Port:    Port-channel1
+
+This confirms that the inter-distribution EtherChannel provides the
+preferred Layer 2 path toward the root bridge.
+
+
+================================================================
+RAPID PVST+ OPERATION
+================================================================
+
+The output reports:
+
+  Spanning tree enabled protocol rstp
+
+for each verified VLAN.
+
+This confirms Rapid Spanning Tree operation within the per-VLAN
+Spanning Tree design.
+
+The distribution-layer ports shown in the captured output are in the
+Forwarding state.
+
+Access-layer alternate or blocking port behavior is verified
+separately from the access switches when required.
+
+
+================================================================
+VERIFICATION RESULTS
+================================================================
+
+PASS
+
+Rapid PVST+ verification confirms:
+
+  - DSW1 is Root Bridge for VLAN 10.
+  - DSW2 is Root Bridge for VLAN 20.
+  - DSW1 is Root Bridge for VLAN 30.
+  - DSW2 is Root Bridge for VLAN 99.
+  - DSW1 is Root Bridge for VLAN 999.
+  - Root placement matches the intended per-VLAN design.
+  - Configured bridge priorities determine the preferred roots.
+  - Extended system IDs correctly incorporate the VLAN number into
+    the displayed bridge priority.
+  - Port-channel1 is treated as one logical Spanning Tree interface.
+  - The non-root distribution switch uses Port-channel1 as its Root
+    Port.
+  - The root distribution switch uses Port-channel1 as a Designated
+    Forwarding port.
+  - The inter-distribution path is forwarding for all tested VLANs.
+
+
+================================================================
+CONCLUSION
+================================================================
+
+The Rapid PVST+ distribution-layer design is operating as intended.
+
+Root-bridge responsibility is deliberately divided between DSW1 and
+DSW2:
+
+  DSW1:
+    VLAN 10
+    VLAN 30
+    VLAN 999
+
+  DSW2:
+    VLAN 20
+    VLAN 99
+
+This design demonstrates deliberate per-VLAN Spanning Tree root
+placement while maintaining redundant Layer 2 connectivity through
+the distribution layer.
+
+The operational output also demonstrates the integration between
+Rapid PVST+ and the LACP EtherChannel connecting DSW1 and DSW2.
+
+================================================================
+END OF SPANNING TREE VERIFICATION
+================================================================

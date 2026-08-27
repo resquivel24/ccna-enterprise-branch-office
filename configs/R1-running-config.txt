@@ -1,0 +1,222 @@
+!
+! ================================================================
+! CCNA Enterprise Branch Office Lab
+! Device: R1
+! Role: Enterprise Edge Router
+!
+! Sanitized running configuration for portfolio documentation.
+!
+! Authentication secrets, password hashes, SNMP communities,
+! FTP credentials, and device-specific serial information have
+! been removed or replaced with descriptive placeholders.
+!
+! This file is intended for technical demonstration only.
+! ================================================================
+!
+version 16.6
+service timestamps debug datetime msec
+service timestamps log datetime msec
+platform qfp utilization monitor load 80
+no platform punt-keepalive disable-kernel-core
+platform console serial
+!
+hostname R1
+!
+boot-start-marker
+boot-end-marker
+!
+! Enable secret removed from portfolio copy
+! enable secret <REDACTED>
+!
+no aaa new-model
+clock timezone ESP 1 0
+clock summer-time SDT recurring
+!
+no ip domain lookup
+ip domain name lab.local
+!
+subscriber templating
+!
+ipv6 unicast-routing
+!
+multilink bundle-name authenticated
+!
+! Virtual appliance serial information removed
+! license udi pid CSR1000V sn <REDACTED>
+diagnostic bootup level minimal
+spanning-tree extend system-id
+!
+! Local administrative username retained, password hash removed
+! username roberto secret <REDACTED>
+!
+redundancy
+!
+interface Loopback0
+ ip address 1.1.1.1 255.255.255.255
+ ip ospf 1 area 0
+!
+interface GigabitEthernet1
+ description Routed link to DSW1
+ ip address 10.0.1.129 255.255.255.252
+ ip nat inside
+ ip ospf 1 area 0
+ negotiation auto
+ ipv6 address 2001:DB8:1001::1/64
+ no mop enabled
+ no mop sysid
+!
+interface GigabitEthernet2
+ description Routed link to DSW2
+ ip address 10.0.1.133 255.255.255.252
+ ip nat inside
+ ip ospf 1 area 0
+ negotiation auto
+ ipv6 address 2001:DB8:1001:1::1/64
+ no mop enabled
+ no mop sysid
+!
+interface GigabitEthernet3
+ description 802.1Q trunk toward SW5
+ no ip address
+ ip ospf 1 area 0
+ negotiation auto
+ no mop enabled
+ no mop sysid
+!
+interface GigabitEthernet3.99
+ description SW5 management transit
+ encapsulation dot1Q 99
+ ip address 10.0.1.141 255.255.255.252
+ ip ospf 1 area 0
+!
+interface GigabitEthernet3.200
+ description DHCP-DNS server network
+ encapsulation dot1Q 200
+ ip address 10.0.2.1 255.255.255.0
+ ip nat inside
+ ip ospf 1 area 0
+!
+interface GigabitEthernet3.300
+ description Web-FTP server network
+ encapsulation dot1Q 300
+ ip address 10.0.3.1 255.255.255.0
+ ip nat inside
+ ip ospf 1 area 0
+!
+interface GigabitEthernet4
+ description Internet-facing interface
+ ip address 192.168.1.137 255.255.255.0
+ ip nat outside
+ negotiation auto
+ no mop enabled
+ no mop sysid
+!
+router ospf 1
+!
+virtual-service csr_mgmt
+!
+! ------------------------------------------------
+! NAT / Internet Connectivity
+! ------------------------------------------------
+!
+ip nat inside source list 2 interface GigabitEthernet4 overload
+ip forward-protocol nd
+!
+ip http server
+ip http authentication local
+ip http secure-server
+!
+! ------------------------------------------------
+! FTP Configuration
+! ------------------------------------------------
+!
+! FTP username retained to demonstrate IOS FTP configuration.
+! Password removed from portfolio copy.
+!
+ip ftp username web-ft
+! ip ftp password <REDACTED>
+!
+! ------------------------------------------------
+! IPv4 Default Route
+! ------------------------------------------------
+!
+ip route 0.0.0.0 0.0.0.0 192.168.1.1
+!
+! ------------------------------------------------
+! SSH Management
+! ------------------------------------------------
+!
+ip ssh version 2
+ip ssh server algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+ip ssh client algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+!
+! ------------------------------------------------
+! Management / NAT ACLs
+! ------------------------------------------------
+!
+access-list 1 permit 10.0.1.96 0.0.0.31
+access-list 1 permit 0.0.0.0 255.255.255.0
+access-list 2 permit 10.0.0.0 0.0.15.255
+!
+! ------------------------------------------------
+! IPv6 Static Routing
+! ------------------------------------------------
+!
+ipv6 route 2001:DB8:10::/64 2001:DB8:1001::2
+ipv6 route 2001:DB8:20::/64 2001:DB8:1001:1::2
+ipv6 route 2001:DB8:30::/64 2001:DB8:1001::2
+ipv6 route 2001:DB8:99::/64 2001:DB8:1001:1::2
+!
+! ------------------------------------------------
+! SNMP
+! ------------------------------------------------
+!
+! SNMP community strings removed from portfolio copy.
+!
+! snmp-server community <REDACTED> RO
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+! snmp-server host 10.0.1.105 version 2c <REDACTED>
+!
+control-plane
+!
+! ------------------------------------------------
+! Console / VTY Management
+! ------------------------------------------------
+!
+line con 0
+ logging synchronous
+ stopbits 1
+!
+line vty 0
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+line vty 1 2
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ length 0
+ transport input ssh
+!
+line vty 3 4
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+! ------------------------------------------------
+! NTP
+! ------------------------------------------------
+!
+ntp source GigabitEthernet4
+ntp server 216.239.35.12
+!
+end

@@ -74,7 +74,7 @@ The lab is used to practice:
 - Redundant distribution connectivity
 - Routing toward R1
 - EtherChannel
-- Spanning Tree participation
+- Rapid PVST+ participation
 
 ### Access Layer
 
@@ -90,14 +90,14 @@ The access layer consists of:
 
 ## VLAN Design
 
-| VLAN | Purpose | IPv4 Network | IPv6 Network |
-|---:|---|---|---|
-| 10 | Engineering | `10.0.1.0/27` | `2001:DB8:10::/64` |
-| 20 | Human Resources | `10.0.1.32/27` | `2001:DB8:20::/64` |
-| 30 | Sales | `10.0.1.64/27` | `2001:DB8:30::/64` |
-| 99 | Management | `10.0.1.96/27` | `2001:DB8:99::/64` |
-| 200 | Server Network | `10.0.2.0/24` | — |
-| 300 | Web / FTP Server Network | `10.0.3.0/24` | — |
+| VLAN | Purpose                  | IPv4 Network   | IPv6 Network       |
+| ---: | ------------------------ | -------------- | ------------------ |
+|   10 | Engineering              | `10.0.1.0/27`  | `2001:DB8:10::/64` |
+|   20 | Human Resources          | `10.0.1.32/27` | `2001:DB8:20::/64` |
+|   30 | Sales                    | `10.0.1.64/27` | `2001:DB8:30::/64` |
+|   99 | Management               | `10.0.1.96/27` | `2001:DB8:99::/64` |
+|  200 | Server Network           | `10.0.2.0/24`  | —                  |
+|  300 | Web / FTP Server Network | `10.0.3.0/24`  | —                  |
 
 Detailed addressing information is available in:
 
@@ -113,9 +113,10 @@ Detailed addressing information is available in:
 - Access ports
 - 802.1Q trunking
 - Native VLAN
-- Spanning Tree Protocol
-- EtherChannel
+- Rapid PVST+
+- EtherChannel using LACP
 - Layer 2 redundancy
+- STP root-bridge distribution
 
 ### Layer 3
 
@@ -139,7 +140,9 @@ Detailed addressing information is available in:
 - SLAAC
 - IPv6 routing tables
 - IPv6 static routes
-- IPv6 first-hop redundancy testing
+- IPv6 HSRPv2
+- IPv6 first-hop redundancy
+- IPv6 inter-VLAN forwarding through HSRP virtual gateways
 
 ### Network Services
 
@@ -176,18 +179,45 @@ Additional CCNA security features are being added as the security portion of the
 
 ## High Availability
 
-IPv4 HSRP provides redundant default gateways across DSW1 and DSW2.
+HSRP version 2 provides redundant first-hop gateways across DSW1 and DSW2 for both IPv4 and IPv6.
 
-The Active role is distributed between the two switches:
+The final design uses a consistent HSRP group-numbering convention:
 
-| VLAN | Preferred IPv4 Active |
-|---:|---|
-| 10 | DSW1 |
-| 20 | DSW2 |
-| 30 | DSW1 |
-| 99 | DSW2 |
+- **IPv4 HSRP group = VLAN ID**
+- **IPv6 HSRP group = VLAN ID + 100**
 
-IPv6 HSRPv2 was configured using the opposite preferred distribution switch to provide additional first-hop redundancy practice.
+The preferred Active gateway is distributed between DSW1 and DSW2 and aligned with the Rapid PVST+ root bridge for each VLAN.
+
+| VLAN | IPv4 Group | IPv6 Group | Preferred Active | STP Root |
+| ---: | ---------: | ---------: | ---------------- | -------- |
+|   10 |         10 |        110 | DSW1             | DSW1     |
+|   20 |         20 |        120 | DSW2             | DSW2     |
+|   30 |         30 |        130 | DSW1             | DSW1     |
+|   99 |         99 |        199 | DSW2             | DSW2     |
+
+This alignment keeps the preferred Layer 2 forwarding path and Layer 3 first-hop gateway on the same distribution switch.
+
+The IPv4 virtual gateways are:
+
+| VLAN | IPv4 Virtual Gateway |
+| ---: | -------------------- |
+|   10 | `10.0.1.3`           |
+|   20 | `10.0.1.35`          |
+|   30 | `10.0.1.67`          |
+|   99 | `10.0.1.99`          |
+
+The IPv6 HSRP global virtual gateways are:
+
+| VLAN | IPv6 Virtual Gateway |
+| ---: | -------------------- |
+|   10 | `2001:DB8:10::3`     |
+|   20 | `2001:DB8:20::3`     |
+|   30 | `2001:DB8:30::3`     |
+|   99 | `2001:DB8:99::3`     |
+
+Detailed verification is available in:
+
+[`verification/hsrp-verification.txt`](verification/hsrp-verification.txt)
 
 Detailed topology information is available in:
 
@@ -199,7 +229,7 @@ Detailed topology information is available in:
 
 The network was extended from IPv4-only operation to dual-stack IPv4/IPv6.
 
-IPv6 connectivity was successfully verified across:
+IPv6 connectivity has been successfully verified across:
 
 - Routed R1-to-distribution links
 - VLAN 10
@@ -209,18 +239,30 @@ IPv6 connectivity was successfully verified across:
 - Inter-VLAN routing
 - R1-to-VLAN connectivity
 
-SLAAC and Neighbor Discovery were verified using a Linux endpoint.
+SLAAC, Router Advertisements, and Neighbor Discovery were verified using Linux endpoints.
 
-IPv6 HSRPv2 control-plane functionality was also verified, including:
+IPv6 HSRPv2 functionality was verified, including:
 
 - Active/Standby election
 - Priority
 - Preemption
-- Virtual IPv6 addressing
-- Virtual MAC addressing
-- Failover
+- Global virtual IPv6 addressing
+- Virtual link-local gateway addressing
+- Client default-gateway learning through Router Advertisements
+- First-hop redundancy
+- IPv6 forwarding through the HSRP virtual gateway
 
-A forwarding limitation involving the HSRPv2 virtual IPv6 gateway was observed in the IOSvL2/GNS3 environment. The behavior and troubleshooting process are documented rather than hidden, because identifying and isolating platform limitations is part of the purpose of the lab.
+During development, IPv6 inter-VLAN forwarding through the HSRP virtual gateway initially failed under the original HSRP design.
+
+The issue was investigated by rebuilding the HSRP configuration using consistent group numbering and aligning IPv4 HSRP, IPv6 HSRP, and spanning-tree gateway placement.
+
+After the redesign, IPv6 hosts successfully learned the new HSRP virtual link-local gateways through Router Advertisements and successfully forwarded traffic between VLANs.
+
+The earlier hypothesis that the failure represented an inherent IOSvL2/GNS3 HSRPv2 forwarding limitation was therefore disproved through testing.
+
+Detailed IPv6 evidence is available in:
+
+[`verification/ipv6-verification.txt`](verification/ipv6-verification.txt)
 
 ---
 
@@ -243,14 +285,14 @@ Troubleshooting activities have included:
 - Legacy SSH algorithm negotiation
 - IPv6 SLAAC and Router Advertisement verification
 - IPv6 HSRPv2 forwarding investigation
+- HSRP group redesign
+- HSRP and STP path alignment
 
 The troubleshooting process follows a layered approach rather than changing configurations randomly.
 
-Verification evidence will be added progressively under:
+Operational verification evidence is documented under:
 
-```text
-verification/
-```
+[`verification/`](verification/)
 
 ---
 
@@ -272,7 +314,12 @@ ccna-enterprise-branch-office/
 │   └── topology.md
 │
 └── verification/
-    └── Configuration and troubleshooting evidence
+    ├── README.md
+    ├── etherchannel-verification.txt
+    ├── hsrp-verification.txt
+    ├── ipv6-verification.txt
+    ├── ospf-verification.txt
+    └── spanning-tree-verification.txt
 ```
 
 Large GNS3 appliance files, virtual disks, IOS images, and runtime data are intentionally excluded from the repository.
@@ -292,6 +339,32 @@ Detailed IPv4 and IPv6 addressing:
 Detailed architecture and device-role documentation:
 
 [`docs/topology.md`](docs/topology.md)
+
+### Verification Evidence
+
+Operational configuration and troubleshooting evidence:
+
+[`verification/`](verification/)
+
+---
+
+## Verification Evidence
+
+The current verification package documents operational testing for several core technologies.
+
+| Technology         | Evidence                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| HSRPv2             | [`verification/hsrp-verification.txt`](verification/hsrp-verification.txt)                   |
+| IPv6 / SLAAC / NDP | [`verification/ipv6-verification.txt`](verification/ipv6-verification.txt)                   |
+| OSPFv2             | [`verification/ospf-verification.txt`](verification/ospf-verification.txt)                   |
+| LACP EtherChannel  | [`verification/etherchannel-verification.txt`](verification/etherchannel-verification.txt)   |
+| Rapid PVST+        | [`verification/spanning-tree-verification.txt`](verification/spanning-tree-verification.txt) |
+
+The verification methodology and planned evidence are documented in:
+
+[`verification/README.md`](verification/README.md)
+
+Additional verification evidence will be added as other implemented technologies are formally captured and sanitized for publication.
 
 ---
 
@@ -314,7 +387,7 @@ Topology diagram
         ↓
 Device configurations
         ↓
-Verification evidence
+Network verification evidence
         ↓
 Layer 2 security
         ↓
@@ -338,33 +411,40 @@ The public portfolio version of the project will not include:
 - Production credentials
 - Cisco IOS image files
 
-Configuration files will be reviewed before the repository is made public.
+Configuration and verification files are sanitized before publication.
+
+The repository remains subject to a final credential and Git-history audit before being made public.
 
 ---
 
 ## Current Project Status
 
-| Area | Status |
-|---|---|
-| Enterprise topology | Implemented |
-| IPv4 addressing | Verified |
-| IPv6 addressing | Verified |
-| VLANs and trunking | Implemented |
-| Inter-VLAN routing | Verified |
-| OSPFv2 | Implemented |
-| IPv4 HSRP | Verified |
-| IPv6 HSRPv2 control plane | Verified |
-| IPv6 static routing | Verified |
-| DHCP / DNS | Verified |
-| NAT / PAT | Verified |
-| ACLs | Implemented |
-| NTP | Verified |
-| SNMP / traps | Verified |
-| Syslog | Verified |
-| SSH | Verified |
-| FTP configuration backup | Verified |
-| Security hardening | In progress |
-| Portfolio documentation | In progress |
+| Area                          | Status      |
+| ----------------------------- | ----------- |
+| Enterprise topology           | Implemented |
+| IPv4 addressing               | Verified    |
+| IPv6 addressing               | Verified    |
+| VLANs and trunking            | Implemented |
+| Inter-VLAN routing            | Verified    |
+| Rapid PVST+                   | Verified    |
+| LACP EtherChannel             | Verified    |
+| OSPFv2                        | Verified    |
+| IPv4 HSRP                     | Verified    |
+| IPv6 HSRPv2                   | Verified    |
+| IPv6 HSRP forwarding          | Verified    |
+| SLAAC / Router Advertisements | Verified    |
+| IPv6 Neighbor Discovery       | Verified    |
+| IPv6 static routing           | Verified    |
+| DHCP / DNS                    | Verified    |
+| NAT / PAT                     | Verified    |
+| ACLs                          | Implemented |
+| NTP                           | Verified    |
+| SNMP / traps                  | Verified    |
+| Syslog                        | Verified    |
+| SSH                           | Verified    |
+| FTP configuration backup      | Verified    |
+| Security hardening            | In progress |
+| Portfolio documentation       | In progress |
 
 ---
 
@@ -377,6 +457,8 @@ Planned additions include further CCNA security implementation and verification,
 - Dynamic ARP Inspection
 - Additional device-hardening controls
 - Centralized AAA lab extension where appropriate
+
+Additional verification evidence will also be captured for technologies that are already operational but do not yet have dedicated verification files.
 
 Only features that are actually implemented and verified will be marked as complete.
 

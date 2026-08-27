@@ -1,0 +1,196 @@
+!
+! ================================================================
+! CCNA Enterprise Branch Office Lab
+! Device: SW2
+! Role: Layer 2 Access Switch - Human Resources
+!
+! Sanitized running configuration for portfolio documentation.
+!
+! Authentication secrets, password hashes, and SNMP community
+! strings have been removed or replaced with placeholders.
+!
+! IOSv evaluation banners have been omitted from the portfolio copy.
+!
+! This file preserves the implemented networking configuration and
+! is intended for technical demonstration only.
+! ================================================================
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+service compress-config
+!
+hostname SW2
+!
+boot-start-marker
+boot-end-marker
+!
+! Enable secret removed from portfolio copy
+! enable secret <REDACTED>
+!
+! Local administrative username retained, password hash removed
+! username roberto secret <REDACTED>
+!
+no aaa new-model
+!
+ip domain-name lab.local
+ip cef
+no ipv6 cef
+!
+! ------------------------------------------------
+! Rapid PVST+
+! ------------------------------------------------
+!
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+! ------------------------------------------------
+! Redundant Distribution-Layer Trunks
+! ------------------------------------------------
+!
+interface GigabitEthernet0/0
+ description 802.1Q trunk toward distribution layer
+ switchport trunk allowed vlan 10,20,30,99
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+!
+interface GigabitEthernet0/1
+ description 802.1Q trunk toward distribution layer
+ switchport trunk allowed vlan 10,20,30,99
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+!
+! ------------------------------------------------
+! Human Resources Access Ports
+! ------------------------------------------------
+!
+interface GigabitEthernet0/2
+ description Human Resources endpoint
+ switchport access vlan 20
+ switchport mode access
+ negotiation auto
+ spanning-tree portfast edge
+!
+interface GigabitEthernet0/3
+ description Human Resources endpoint
+ switchport access vlan 20
+ switchport mode access
+ negotiation auto
+ spanning-tree portfast edge
+!
+! ------------------------------------------------
+! Unused / Default Interfaces
+! ------------------------------------------------
+!
+interface GigabitEthernet1/0
+ negotiation auto
+!
+interface GigabitEthernet1/1
+ negotiation auto
+!
+interface GigabitEthernet1/2
+ negotiation auto
+!
+interface GigabitEthernet1/3
+ negotiation auto
+!
+interface GigabitEthernet2/0
+ negotiation auto
+!
+interface GigabitEthernet2/1
+ negotiation auto
+!
+interface GigabitEthernet2/2
+ negotiation auto
+!
+interface GigabitEthernet2/3
+ negotiation auto
+!
+interface GigabitEthernet3/0
+ negotiation auto
+!
+interface GigabitEthernet3/1
+ negotiation auto
+!
+interface GigabitEthernet3/2
+ negotiation auto
+!
+interface GigabitEthernet3/3
+ negotiation auto
+!
+! ------------------------------------------------
+! Management SVI
+! ------------------------------------------------
+!
+interface Vlan99
+ description Switch management SVI
+ ip address 10.0.1.104 255.255.255.224
+!
+! ------------------------------------------------
+! Layer 2 Switch Default Gateway
+! ------------------------------------------------
+!
+ip default-gateway 10.0.1.99
+ip forward-protocol nd
+!
+ip http server
+!
+! ------------------------------------------------
+! SSH Management
+! ------------------------------------------------
+!
+ip ssh version 2
+ip ssh server algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+ip ssh client algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+!
+! ------------------------------------------------
+! Management Access ACL
+! ------------------------------------------------
+!
+access-list 1 permit 10.0.1.96 0.0.0.31
+!
+! ------------------------------------------------
+! SNMP
+! ------------------------------------------------
+!
+! SNMP community strings removed from portfolio copy.
+!
+! snmp-server community <REDACTED> RO
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+! snmp-server host 10.0.1.105 version 2c <REDACTED>
+!
+control-plane
+!
+! ------------------------------------------------
+! IOSv Evaluation Banners
+! ------------------------------------------------
+!
+! Original IOSv evaluation banners omitted from portfolio copy.
+!
+! ------------------------------------------------
+! Console / VTY Management
+! ------------------------------------------------
+!
+line con 0
+ logging synchronous
+!
+line aux 0
+!
+line vty 0 4
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+end

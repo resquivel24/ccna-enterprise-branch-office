@@ -1,0 +1,331 @@
+!
+! ================================================================
+! CCNA Enterprise Branch Office Lab
+! Device: DSW1
+! Role: Layer 3 Distribution Switch
+!
+! Sanitized running configuration for portfolio documentation.
+!
+! Authentication secrets, password hashes, and SNMP community
+! strings have been removed or replaced with placeholders.
+!
+! IOSv evaluation banners have been omitted from the portfolio copy.
+!
+! This file preserves the implemented networking configuration and
+! is intended for technical demonstration only.
+! ================================================================
+!
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+service compress-config
+!
+hostname DSW1
+!
+boot-start-marker
+boot-end-marker
+!
+! Enable secret removed from portfolio copy
+! enable secret <REDACTED>
+!
+! Local administrative username retained, password hash removed
+! username roberto secret <REDACTED>
+!
+no aaa new-model
+clock timezone SPN 1 0
+clock summer-time SDT recurring
+!
+ip domain-name lab.local
+ip name-server 10.0.2.2
+ip cef
+ipv6 unicast-routing
+ipv6 cef
+!
+! ------------------------------------------------
+! Rapid PVST+ / Spanning Tree
+! ------------------------------------------------
+!
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+spanning-tree vlan 10,30,999 priority 24576
+spanning-tree vlan 20,99 priority 28672
+!
+! ------------------------------------------------
+! EtherChannel Between Distribution Switches
+! ------------------------------------------------
+!
+interface Port-channel1
+ description LACP EtherChannel toward DSW2
+ switchport trunk allowed vlan 10,20,30,40,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+!
+! ------------------------------------------------
+! Access-Layer Trunks
+! ------------------------------------------------
+!
+interface GigabitEthernet0/0
+ description Trunk toward access layer
+ switchport trunk allowed vlan 10,20,30,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+!
+interface GigabitEthernet0/1
+ description Trunk toward access layer
+ switchport trunk allowed vlan 10,20,30,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+!
+interface GigabitEthernet0/2
+ description Trunk toward access layer
+ switchport trunk allowed vlan 10,20,30,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+!
+interface GigabitEthernet0/3
+ description LACP member toward DSW2
+ switchport trunk allowed vlan 10,20,30,40,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+ channel-group 1 mode active
+!
+! ------------------------------------------------
+! Routed Uplink to R1
+! ------------------------------------------------
+!
+interface GigabitEthernet1/0
+ description Routed link to R1
+ no switchport
+ ip address 10.0.1.130 255.255.255.252
+ ip ospf 1 area 0
+ negotiation auto
+ ipv6 address 2001:DB8:1001::2/64
+!
+! ------------------------------------------------
+! Additional Access-Layer Trunk
+! ------------------------------------------------
+!
+interface GigabitEthernet1/1
+ description Trunk toward access layer
+ switchport trunk allowed vlan 10,20,30,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+!
+! ------------------------------------------------
+! EtherChannel Member
+! ------------------------------------------------
+!
+interface GigabitEthernet1/2
+ description LACP member toward DSW2
+ switchport trunk allowed vlan 10,20,30,40,99,999
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ negotiation auto
+ channel-group 1 mode active
+!
+! ------------------------------------------------
+! Unused / Default Interfaces
+! ------------------------------------------------
+!
+interface GigabitEthernet1/3
+ negotiation auto
+!
+interface GigabitEthernet2/0
+ negotiation auto
+!
+interface GigabitEthernet2/1
+ negotiation auto
+!
+interface GigabitEthernet2/2
+ negotiation auto
+!
+interface GigabitEthernet2/3
+ negotiation auto
+!
+interface GigabitEthernet3/0
+ negotiation auto
+!
+interface GigabitEthernet3/1
+ negotiation auto
+!
+interface GigabitEthernet3/2
+ negotiation auto
+!
+interface GigabitEthernet3/3
+ negotiation auto
+!
+! ------------------------------------------------
+! VLAN 10 - Engineering
+! ------------------------------------------------
+!
+interface Vlan10
+ description Engineering default-gateway SVI
+ ip address 10.0.1.1 255.255.255.224
+ ip helper-address 10.0.2.2
+ standby version 2
+ standby 1 ip 10.0.1.3
+ standby 1 priority 105
+ standby 1 preempt
+ standby 2 ipv6 2001:DB8:10::3/64
+ ip ospf 1 area 0
+ ipv6 address 2001:DB8:10::1/64
+!
+! ------------------------------------------------
+! VLAN 20 - Human Resources
+! ------------------------------------------------
+!
+interface Vlan20
+ description Human Resources default-gateway SVI
+ ip address 10.0.1.33 255.255.255.224
+ ip helper-address 10.0.2.2
+ standby version 2
+ standby 2 ip 10.0.1.35
+ standby 5 ipv6 2001:DB8:20::3/64
+ standby 5 priority 105
+ standby 5 preempt
+ ip ospf 1 area 0
+ ipv6 address 2001:DB8:20::1/64
+!
+! ------------------------------------------------
+! VLAN 30 - Sales
+! ------------------------------------------------
+!
+interface Vlan30
+ description Sales default-gateway SVI
+ ip address 10.0.1.65 255.255.255.224
+ ip helper-address 10.0.2.2
+ standby version 2
+ standby 2 ipv6 2001:DB8:30::3/64
+ standby 3 ip 10.0.1.67
+ standby 3 priority 105
+ standby 3 preempt
+ ip ospf 1 area 0
+ ipv6 address 2001:DB8:30::1/64
+!
+! ------------------------------------------------
+! VLAN 40 - Distribution Transit Network
+! ------------------------------------------------
+!
+interface Vlan40
+ description Routed transit toward DSW2
+ ip address 10.0.1.137 255.255.255.252
+ ip ospf 1 area 0
+!
+! ------------------------------------------------
+! VLAN 99 - Management
+! ------------------------------------------------
+!
+interface Vlan99
+ description Management default-gateway SVI
+ ip address 10.0.1.97 255.255.255.224
+ ip helper-address 10.0.2.2
+ standby version 2
+ standby 2 ipv6 2001:DB8:99::3/64
+ standby 2 priority 105
+ standby 2 preempt
+ standby 4 ip 10.0.1.99
+ ip ospf 1 area 0
+ ipv6 address 2001:DB8:99::1/64
+!
+! ------------------------------------------------
+! OSPFv2
+! ------------------------------------------------
+!
+router ospf 1
+ passive-interface Vlan10
+ passive-interface Vlan20
+ passive-interface Vlan30
+ passive-interface Vlan40
+ passive-interface Vlan99
+!
+ip forward-protocol nd
+!
+ip http server
+!
+! ------------------------------------------------
+! IPv4 Static Routing
+! ------------------------------------------------
+!
+ip route 0.0.0.0 0.0.0.0 10.0.1.129
+ip route 0.0.0.0 0.0.0.0 10.0.1.138 2
+ip route 1.1.1.1 255.255.255.255 10.0.1.129
+!
+! ------------------------------------------------
+! SSH Management
+! ------------------------------------------------
+!
+ip ssh version 2
+ip ssh server algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+ip ssh client algorithm encryption aes128-ctr aes192-ctr aes256-ctr
+!
+! ------------------------------------------------
+! Management Access ACL
+! ------------------------------------------------
+!
+access-list 1 permit 10.0.1.96 0.0.0.31
+!
+! ------------------------------------------------
+! IPv6 Static Routing
+! ------------------------------------------------
+!
+ipv6 route ::/0 2001:DB8:1001::1
+!
+! ------------------------------------------------
+! SNMP
+! ------------------------------------------------
+!
+! SNMP community strings removed from portfolio copy.
+!
+! snmp-server community <REDACTED> RO
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+! snmp-server host 10.0.1.105 version 2c <REDACTED>
+!
+control-plane
+!
+! ------------------------------------------------
+! IOSv Evaluation Banners
+! ------------------------------------------------
+!
+! Original IOSv evaluation banners omitted from portfolio copy.
+!
+! ------------------------------------------------
+! Console / VTY Management
+! ------------------------------------------------
+!
+line con 0
+ logging synchronous
+!
+line aux 0
+!
+line vty 0 4
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ exec-timeout 20 0
+ login local
+ transport input ssh
+!
+! ------------------------------------------------
+! NTP
+! ------------------------------------------------
+!
+ntp server 1.1.1.1
+!
+end

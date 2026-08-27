@@ -1,0 +1,33 @@
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.log
+
+# GNS3 / VM / disk images — never commit
+*.qcow2
+*.qcow
+*.vmdk
+*.vdi
+*.img
+*.iso
+*.bin
+*.image
+
+# Packet captures can become very large
+*.pcap
+*.pcapng
+
+# Secrets / private material
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Generated backup files
+*.bak

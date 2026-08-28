@@ -1,0 +1,251 @@
+CCNA ENTERPRISE BRANCH OFFICE LAB
+CENTRALIZED AAA / TACACS+ VERIFICATION
+======================================
+
+PURPOSE
+-------
+
+This file documents verification of centralized AAA for administrative access
+to the Cisco infrastructure devices in the CCNA Enterprise Branch Office Lab.
+
+The implementation uses TACACS+ for centralized authentication, authorization,
+and EXEC accounting while retaining local recovery methods.
+
+Sensitive passwords and TACACS+ shared secrets are intentionally excluded from
+this repository.
+
+
+AAA SERVER
+----------
+
+Hostname: AUT-SRV-AAA
+IPv4 Address: 10.0.1.106/27
+Management VLAN: 99
+Default Gateway: 10.0.1.99
+DNS Server: 10.0.2.2
+Connected Switch: SW4
+Connected Interface: Gi0/3
+Primary AAA Protocol: TACACS+
+Transport: TCP/49
+
+The AAA server was verified as reachable from the network infrastructure before
+centralized AAA was deployed.
+
+
+AAA DESIGN
+----------
+
+The infrastructure devices use the following logical AAA design:
+
+- TACACS+ is the primary method for remote administrative authentication.
+- Local authentication is retained as a fallback if the TACACS+ server becomes
+  unavailable.
+- Console access uses a separate local-only authentication method for recovery.
+- EXEC authorization is performed through TACACS+ with local fallback.
+- Privilege-level 15 commands are subject to TACACS+ command authorization.
+- Remote administrative sessions use TACACS+ EXEC start-stop accounting.
+- SSH remains the permitted remote-management protocol.
+- Existing VTY management access controls remain in place.
+
+The public repository uses <REDACTED> in place of TACACS+ shared secrets.
+
+
+SW4 PILOT VERIFICATION
+----------------------
+
+SW4 was used as the pilot device before the configuration was deployed to the
+rest of the infrastructure.
+
+SW4 Management Address: 10.0.1.100
+AAA Server: 10.0.1.106
+
+
+1. CENTRALIZED TACACS+ AUTHENTICATION
+-------------------------------------
+
+An SSH session was initiated from the management workstation PC7 to SW4 using
+a TACACS+ administrative account.
+
+Result:
+
+- TACACS+ authentication succeeded.
+- An EXEC session was established.
+- "show privilege" reported privilege level 15.
+
+Status: VERIFIED
+
+
+2. TACACS+ COMMAND AUTHORIZATION
+--------------------------------
+
+A restricted TACACS+ account was used to test command authorization.
+
+The account successfully executed operational commands including:
+
+show privilege
+show ip interface brief
+show vlan brief
+
+The same account then attempted:
+
+configure terminal
+
+The device returned:
+
+Command authorization failed.
+
+This demonstrates that privilege level 15 alone does not provide unrestricted
+configuration access when TACACS+ per-command authorization is enforced.
+
+Status: VERIFIED
+
+
+3. LOCAL AUTHENTICATION FALLBACK
+--------------------------------
+
+The TACACS+ service was intentionally made unavailable during testing.
+
+An SSH login using the device's local administrative account was then tested.
+
+Result:
+
+- TACACS+ was unavailable.
+- IOS proceeded to the configured local fallback method.
+- The local administrative account successfully authenticated.
+
+The TACACS+ service was subsequently restored.
+
+This also demonstrated an important AAA behavior: local fallback is used when
+the TACACS+ service is unavailable or returns an error. It is not used merely
+because a reachable TACACS+ server rejects validly processed credentials.
+
+Status: VERIFIED
+
+
+4. LOCAL CONSOLE RECOVERY
+-------------------------
+
+Console authentication was configured with a separate local-only AAA method
+list rather than inheriting the default TACACS+ login method.
+
+A new console session was opened while the TACACS+ server was available.
+
+Result:
+
+- The local administrative account authenticated successfully at the console.
+- Local console access remained independent of centralized TACACS+ login.
+- Privileged EXEC mode remained accessible through the configured local
+  recovery credentials.
+
+This provides a break-glass administrative recovery path if centralized AAA
+configuration or connectivity causes remote-access problems.
+
+Status: VERIFIED
+
+
+5. TACACS+ EXEC ACCOUNTING
+--------------------------
+
+EXEC start-stop accounting was enabled for remote VTY sessions.
+
+A TACACS+ administrative SSH session generated accounting records on the AAA
+server.
+
+Sanitized example:
+
+<timestamp> 10.0.1.100 <AAA-USER> tty2 10.0.1.105 start task_id=<ID> service=shell
+<timestamp> 10.0.1.100 <AAA-USER> tty2 10.0.1.105 stop  task_id=<ID> service=shell elapsed_time=<SECONDS>
+
+The records demonstrated:
+
+- Source network device identification
+- Centralized AAA username
+- Administrative source workstation
+- EXEC session start
+- EXEC session stop
+- Session duration information
+
+Only EXEC accounting is claimed as verified in the portfolio documentation.
+
+Status: VERIFIED
+
+
+INFRASTRUCTURE DEPLOYMENT
+-------------------------
+
+After successful SW4 pilot testing, centralized TACACS+ AAA was deployed to the
+remaining Cisco infrastructure devices.
+
+Device   Management Address   TACACS+ SSH   Privilege 15
+------   ------------------   -----------   ------------
+R1       1.1.1.1              Verified      Verified
+DSW1     10.0.1.97            Verified      Verified
+DSW2     10.0.1.98            Verified      Verified
+SW1      10.0.1.103           Verified      Verified
+SW2      10.0.1.104           Verified      Verified
+SW3      10.0.1.101           Verified      Verified
+SW4      10.0.1.100           Verified      Verified
+SW5      10.0.1.142           Verified      Verified
+
+
+DSW2 SSH RECOVERY NOTE
+----------------------
+
+During deployment, DSW2 initially refused the SSH connection.
+
+Verification showed that SSH was disabled because the RSA host keys were
+missing after a device restart.
+
+RSA keys were regenerated and SSHv2 operation was restored.
+
+After recovery:
+
+- SSH connectivity to DSW2 succeeded.
+- TACACS+ authentication succeeded.
+- The administrative TACACS+ account received privilege level 15.
+
+This was an SSH key issue rather than a TACACS+ failure.
+
+
+FINAL VERIFICATION SUMMARY
+--------------------------
+
+Feature                                      Status
+-------                                      ------
+AAA server reachability                      VERIFIED
+TACACS+ centralized authentication           VERIFIED
+Administrative privilege level 15            VERIFIED
+TACACS+ command authorization                VERIFIED
+Restricted administrative account            VERIFIED
+Configuration command denial                 VERIFIED
+Local authentication fallback                VERIFIED
+Local-only console recovery                  VERIFIED
+TACACS+ EXEC authorization                   VERIFIED
+TACACS+ EXEC accounting                      VERIFIED
+R1 TACACS+ administrative access             VERIFIED
+DSW1 TACACS+ administrative access           VERIFIED
+DSW2 TACACS+ administrative access           VERIFIED
+SW1 TACACS+ administrative access            VERIFIED
+SW2 TACACS+ administrative access            VERIFIED
+SW3 TACACS+ administrative access            VERIFIED
+SW4 TACACS+ administrative access            VERIFIED
+SW5 TACACS+ administrative access            VERIFIED
+
+
+SECURITY / PUBLICATION NOTE
+---------------------------
+
+The repository does not publish:
+
+- TACACS+ shared secrets
+- AAA account passwords
+- Local administrative passwords
+- Enable secrets
+- Private SSH keys
+
+Sanitized device configurations must use placeholders such as:
+
+key <REDACTED>
+
+The centralized AAA implementation is considered VERIFIED for the scope of this
+CCNA lab.

@@ -6,8 +6,9 @@
 !
 ! Sanitized running configuration for portfolio documentation.
 !
-! Authentication secrets, password hashes, and SNMP community
-! strings have been removed or replaced with placeholders.
+! Authentication secrets, password hashes, SNMP community strings,
+! and TACACS+ shared secrets have been removed or replaced with
+! placeholders.
 !
 ! IOSv evaluation banners have been omitted from the portfolio copy.
 !
@@ -29,10 +30,20 @@ boot-end-marker
 ! Enable secret removed from portfolio copy
 ! enable secret <REDACTED>
 !
-! Local administrative username retained, password hash removed
+! Local administrative username retained for AAA fallback/recovery.
+! Password hash removed from portfolio copy.
 ! username roberto secret <REDACTED>
 !
-no aaa new-model
+! ------------------------------------------------
+! AAA / TACACS+ Management
+! ------------------------------------------------
+!
+aaa new-model
+aaa authentication login default group tacacs+ local
+aaa authentication login CONSOLE-LOCAL local
+aaa authorization exec default group tacacs+ local
+aaa authorization commands 15 TACACS-CMDS group tacacs+
+aaa accounting exec TACACS-EXEC start-stop group tacacs+
 !
 ip domain-name lab.local
 ip cef
@@ -66,11 +77,18 @@ interface GigabitEthernet0/1
  negotiation auto
 !
 ! ------------------------------------------------
-! Management Access Port
+! Management / AAA Server Access Ports
 ! ------------------------------------------------
 !
 interface GigabitEthernet0/2
- description Management endpoint
+ description Management endpoint - PC7
+ switchport access vlan 99
+ switchport mode access
+ negotiation auto
+ spanning-tree portfast edge
+!
+interface GigabitEthernet0/3
+ description Centralized AAA server - AUT-SRV-AAA
  switchport access vlan 99
  switchport mode access
  negotiation auto
@@ -79,9 +97,6 @@ interface GigabitEthernet0/2
 ! ------------------------------------------------
 ! Unused / Default Interfaces
 ! ------------------------------------------------
-!
-interface GigabitEthernet0/3
- negotiation auto
 !
 interface GigabitEthernet1/0
  negotiation auto
@@ -160,6 +175,14 @@ access-list 1 permit 10.0.1.96 0.0.0.31
 snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
 ! snmp-server host 10.0.1.105 version 2c <REDACTED>
 !
+! ------------------------------------------------
+! TACACS+ Server
+! ------------------------------------------------
+!
+tacacs server AAA-SERVER
+ address ipv4 10.0.1.106
+ key <REDACTED>
+!
 control-plane
 !
 ! ------------------------------------------------
@@ -174,19 +197,22 @@ control-plane
 !
 line con 0
  logging synchronous
+ login authentication CONSOLE-LOCAL
 !
 line aux 0
 !
 line vty 0 4
  access-class 1 in
  exec-timeout 20 0
- login local
+ authorization commands 15 TACACS-CMDS
+ accounting exec TACACS-EXEC
  transport input ssh
 !
 line vty 5 15
  access-class 1 in
  exec-timeout 20 0
- login local
+ authorization commands 15 TACACS-CMDS
+ accounting exec TACACS-EXEC
  transport input ssh
 !
 end

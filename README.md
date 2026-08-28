@@ -21,6 +21,7 @@ The topology uses a hierarchical enterprise design consisting of:
 - Centralized DHCP/DNS services
 - Web and FTP services
 - Dedicated management workstation
+- Centralized AAA server
 - Internet connectivity
 - IPv4 and IPv6 infrastructure
 
@@ -158,7 +159,9 @@ Detailed addressing information is available in:
 ### Management and Monitoring
 
 - SSHv2
-- Local authentication
+- Centralized TACACS+ authentication
+- Local fallback and local-only console recovery
+- TACACS+ EXEC authorization and accounting
 - SNMP
 - SNMP traps
 - Syslog
@@ -170,10 +173,53 @@ Detailed addressing information is available in:
 
 - Standard and extended ACLs
 - Restricted SSH access
-- Local administrative authentication
+- Centralized TACACS+ AAA
+- TACACS+ privilege-level 15 command authorization
+- Local authentication fallback and console recovery
 - NAT boundary controls
 
-Additional CCNA security features are being added as the security portion of the curriculum is reviewed.
+Centralized AAA is implemented across R1, DSW1, DSW2, and SW1 through SW5 using the `AUT-SRV-AAA` appliance at `10.0.1.106/27` in Management VLAN 99.
+
+The AAA design was verified for centralized SSH authentication, EXEC authorization, privilege-level 15 command authorization, local fallback during TACACS+ server unavailability, local-only console recovery, and EXEC session accounting.
+
+Additional Layer 2 security features are being added as the security portion of the curriculum is reviewed.
+
+---
+
+## Centralized AAA
+
+Network-device administration is centralized through the `AUT-SRV-AAA` appliance.
+
+| Component        | Value             |
+| ---------------- | ----------------- |
+| AAA Server       | `AUT-SRV-AAA`     |
+| IPv4 Address     | `10.0.1.106/27`   |
+| VLAN             | `99 - Management` |
+| Default Gateway  | `10.0.1.99`       |
+| Connected Port   | `SW4 Gi0/3`       |
+| Primary Protocol | `TACACS+`         |
+| Transport        | `TCP/49`          |
+
+TACACS+ has been deployed and verified on R1, DSW1, DSW2, and SW1 through SW5.
+
+The administrative design provides:
+
+- Centralized SSH login authentication
+- Local authentication fallback when TACACS+ is unavailable
+- Local-only console authentication for recovery
+- TACACS+ EXEC authorization
+- Privilege-level 15 command authorization
+- TACACS+ EXEC session accounting
+
+Testing also included a restricted TACACS+ account. Operational `show` commands were permitted while configuration access was denied through command authorization.
+
+EXEC accounting was verified through TACACS+ shell START and STOP records.
+
+Sensitive TACACS+ shared secrets and account passwords are intentionally excluded from repository documentation and sanitized configurations.
+
+Detailed AAA verification is available in:
+
+[`verification/aaa-verification.txt`](verification/aaa-verification.txt)
 
 ---
 
@@ -287,6 +333,9 @@ Troubleshooting activities have included:
 - IPv6 HSRPv2 forwarding investigation
 - HSRP group redesign
 - HSRP and STP path alignment
+- TACACS+ authentication and local-fallback behavior
+- TACACS+ command authorization
+- SSH RSA-key regeneration on DSW2
 
 The troubleshooting process follows a layered approach rather than changing configurations randomly.
 
@@ -317,9 +366,11 @@ ccna-enterprise-branch-office/
     ├── README.md
     ├── etherchannel-verification.txt
     ├── hsrp-verification.txt
+    ├── aaa-verification.txt
     ├── ipv6-verification.txt
     ├── ospf-verification.txt
     └── spanning-tree-verification.txt
+
 ```
 
 Large GNS3 appliance files, virtual disks, IOS images, and runtime data are intentionally excluded from the repository.
@@ -352,13 +403,14 @@ Operational configuration and troubleshooting evidence:
 
 The current verification package documents operational testing for several core technologies.
 
-| Technology         | Evidence                                                                                     |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| HSRPv2             | [`verification/hsrp-verification.txt`](verification/hsrp-verification.txt)                   |
-| IPv6 / SLAAC / NDP | [`verification/ipv6-verification.txt`](verification/ipv6-verification.txt)                   |
-| OSPFv2             | [`verification/ospf-verification.txt`](verification/ospf-verification.txt)                   |
-| LACP EtherChannel  | [`verification/etherchannel-verification.txt`](verification/etherchannel-verification.txt)   |
-| Rapid PVST+        | [`verification/spanning-tree-verification.txt`](verification/spanning-tree-verification.txt) |
+| Technology                | Evidence                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| HSRPv2                    | [`verification/hsrp-verification.txt`](verification/hsrp-verification.txt)                   |
+| IPv6 / SLAAC / NDP        | [`verification/ipv6-verification.txt`](verification/ipv6-verification.txt)                   |
+| OSPFv2                    | [`verification/ospf-verification.txt`](verification/ospf-verification.txt)                   |
+| LACP EtherChannel         | [`verification/etherchannel-verification.txt`](verification/etherchannel-verification.txt)   |
+| Rapid PVST+               | [`verification/spanning-tree-verification.txt`](verification/spanning-tree-verification.txt) |
+| Centralized AAA / TACACS+ | [`verification/aaa-verification.txt`](verification/aaa-verification.txt)                     |
 
 The verification methodology and planned evidence are documented in:
 
@@ -389,9 +441,12 @@ Device configurations
         ↓
 Network verification evidence
         ↓
+Centralized TACACS+ AAA
+        ↓
 Layer 2 security
         ↓
 Additional CCNA features
+
 ```
 
 This allows future changes to be documented and pushed to GitHub without duplicating the full GNS3 runtime environment.
@@ -408,6 +463,7 @@ The public portfolio version of the project will not include:
 - Authentication tokens
 - GitHub personal access tokens
 - Sensitive SNMP community strings
+- TACACS+ shared secrets and account passwords
 - Production credentials
 - Cisco IOS image files
 
@@ -442,6 +498,10 @@ The repository remains subject to a final credential and Git-history audit befor
 | SNMP / traps                  | Verified    |
 | Syslog                        | Verified    |
 | SSH                           | Verified    |
+| Centralized TACACS+ AAA       | Verified    |
+| TACACS+ command authorization | Verified    |
+| Local AAA fallback            | Verified    |
+| TACACS+ EXEC accounting       | Verified    |
 | FTP configuration backup      | Verified    |
 | Security hardening            | In progress |
 | Portfolio documentation       | In progress |
@@ -456,7 +516,6 @@ Planned additions include further CCNA security implementation and verification,
 - DHCP Snooping
 - Dynamic ARP Inspection
 - Additional device-hardening controls
-- Centralized AAA lab extension where appropriate
 
 Additional verification evidence will also be captured for technologies that are already operational but do not yet have dedicated verification files.
 

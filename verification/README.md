@@ -1,6 +1,6 @@
 # Network Verification Evidence
 
-This directory contains operational verification evidence for the **CCNA Enterprise Branch Office Lab**.
+This directory contains operational verification evidence for the \***\*CCNA Enterprise Branch Office Lab\*\***.
 
 The purpose of this section is to demonstrate that the technologies documented in the device configurations were not only configured, but also tested and validated in the GNS3 environment.
 
@@ -224,13 +224,21 @@ Verification will include:
 Relevant verification commands include:
 
     show ssh
+    show privilege
+    show aaa method-lists
     show snmp
     show ntp associations
     show ntp status
     show access-lists
     show logging
 
-Sensitive authentication information and SNMP community strings are excluded from all public verification evidence.
+Centralized AAA was validated first on SW4 and then deployed to R1, DSW1, DSW2, and SW1-SW5. Verification confirmed TACACS+ administrative login, privilege 15 access, command authorization for a restricted account, local fallback behavior, local-only console recovery, and EXEC accounting.
+
+Sensitive authentication information, TACACS+ shared secrets, account passwords, and SNMP community strings are excluded from all public verification evidence.
+
+Current evidence:
+
+    aaa-verification.txt
 
 Planned evidence:
 
@@ -297,7 +305,8 @@ The verification directory currently contains:
     ├── ospf-verification.txt
     ├── etherchannel-verification.txt
     ├── spanning-tree-verification.txt
-    └── ipv6-verification.txt
+    ├── ipv6-verification.txt
+    └── aaa-verification.txt
 
 Additional evidence planned as the lab is expanded and validated:
 
@@ -350,6 +359,11 @@ The verification evidence is intended to demonstrate practical understanding of:
 - DNS
 - NAT/PAT
 - SSH
+- Centralized AAA
+- TACACS+ authentication
+- TACACS+ authorization
+- TACACS+ EXEC accounting
+- Local AAA fallback and console recovery
 - SNMP
 - Syslog
 - NTP

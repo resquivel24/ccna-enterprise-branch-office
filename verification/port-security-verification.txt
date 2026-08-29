@@ -1,0 +1,338 @@
+CCNA ENTERPRISE BRANCH OFFICE LAB
+PORT SECURITY VERIFICATION
+================================
+
+Purpose
+-------
+Verify the final Layer 2 Port Security deployment on the access switches and
+record the behavior observed during violation-mode and recovery testing.
+
+Final Policy
+------------
+User access ports:
+- Maximum secure MAC addresses: 1
+- Secure MAC learning: Sticky
+- Violation mode: Restrict
+
+Management and server access ports:
+- Maximum secure MAC addresses: 1
+- Secure MAC method: Statically configured
+- Violation mode: Shutdown
+- Recovery policy: Manual recovery after the cause of the violation is verified
+
+Port Security is not applied to trunk/uplink infrastructure links.
+
+
+FINAL DEPLOYMENT VERIFICATION
+=============================
+
+SW1 - Engineering VLAN 10
+-------------------------
+SW1#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Gi0/2              1            1                179         Restrict
+      Gi0/3              1            1                  0         Restrict
+---------------------------------------------------------------------------
+
+SW1#show port-security address
+Vlan    Mac Address       Type                          Ports
+----    -----------       ----                          -----
+  10    0cab.17df.0000    SecureSticky                  Gi0/2
+  10    0c27.115a.0000    SecureSticky                  Gi0/3
+
+Gi0/2 verification:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Restrict
+- Maximum MAC Addresses: 1
+- Sticky MAC Addresses: 1
+- Secure MAC: 0cab.17df.0000, VLAN 10
+- Security Violation Count: 179
+
+Gi0/3 verification:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Restrict
+- Maximum MAC Addresses: 1
+- Sticky MAC Addresses: 1
+- Secure MAC: 0c27.115a.0000, VLAN 10
+- Security Violation Count: 0
+
+Result: PASS
+
+
+SW2 - HR VLAN 20
+----------------
+SW2#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Gi0/2              1            1                  0         Restrict
+      Gi0/3              1            1                  0         Restrict
+---------------------------------------------------------------------------
+
+SW2#show port-security address
+Vlan    Mac Address       Type                          Ports
+----    -----------       ----                          -----
+  20    0c7c.eec9.0000    SecureSticky                  Gi0/2
+  20    0cb0.d0bb.0000    SecureSticky                  Gi0/3
+
+Gi0/2 verification:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Restrict
+- Maximum MAC Addresses: 1
+- Sticky MAC Addresses: 1
+- Secure MAC: 0c7c.eec9.0000, VLAN 20
+- Security Violation Count: 0
+
+Gi0/3 verification:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Restrict
+- Maximum MAC Addresses: 1
+- Sticky MAC Addresses: 1
+- Secure MAC: 0cb0.d0bb.0000, VLAN 20
+- Security Violation Count: 0
+
+Result: PASS
+
+
+SW3 - Sales VLAN 30
+-------------------
+SW3#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Gi0/2              1            1                  0         Restrict
+      Gi0/3              1            1                  0         Restrict
+---------------------------------------------------------------------------
+
+SW3#show port-security address
+Vlan    Mac Address       Type                          Ports
+----    -----------       ----                          -----
+  30    0c7f.0ad4.0000    SecureSticky                  Gi0/2
+  30    0c9d.f9f7.0000    SecureSticky                  Gi0/3
+
+Gi0/2 verification:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Restrict
+- Maximum MAC Addresses: 1
+- Sticky MAC Addresses: 1
+- Secure MAC: 0c7f.0ad4.0000, VLAN 30
+- Security Violation Count: 0
+
+Gi0/3 verification:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Restrict
+- Maximum MAC Addresses: 1
+- Sticky MAC Addresses: 1
+- Secure MAC: 0c9d.f9f7.0000, VLAN 30
+- Security Violation Count: 0
+
+Result: PASS
+
+
+SW4 - Management VLAN 99
+------------------------
+SW4#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Gi0/2              1            1                  0         Shutdown
+      Gi0/3              1            1                  0         Shutdown
+---------------------------------------------------------------------------
+
+SW4#show port-security address
+Vlan    Mac Address       Type                          Ports
+----    -----------       ----                          -----
+  99    0c6e.d8c4.0000    SecureConfigured              Gi0/2
+  99    0242.3df5.2200    SecureConfigured              Gi0/3
+
+Gi0/2 - Management host:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Shutdown
+- Maximum MAC Addresses: 1
+- Configured MAC Addresses: 1
+- Sticky MAC Addresses: 0
+- Secure MAC: 0c6e.d8c4.0000, VLAN 99
+- Security Violation Count: 0
+
+Gi0/3 - AAA server:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Shutdown
+- Maximum MAC Addresses: 1
+- Configured MAC Addresses: 1
+- Sticky MAC Addresses: 0
+- Secure MAC: 0242.3df5.2200, VLAN 99
+- Security Violation Count: 0
+
+Result: PASS
+
+
+SW5 - Server VLANs 200 and 300
+------------------------------
+SW5#show port-security
+Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action
+                (Count)       (Count)          (Count)
+---------------------------------------------------------------------------
+      Gi0/1              1            1                  0         Shutdown
+      Gi0/2              1            1                  0         Shutdown
+---------------------------------------------------------------------------
+
+SW5#show port-security address
+Vlan    Mac Address       Type                          Ports
+----    -----------       ----                          -----
+ 200    0c61.24c3.0000    SecureConfigured              Gi0/1
+ 300    0cfc.d7e1.0000    SecureConfigured              Gi0/2
+
+Gi0/1 - DHCP/DNS server:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Shutdown
+- Maximum MAC Addresses: 1
+- Configured MAC Addresses: 1
+- Sticky MAC Addresses: 0
+- Secure MAC: 0c61.24c3.0000, VLAN 200
+- Security Violation Count: 0
+
+Gi0/2 - Web/FTP server:
+- Port Security: Enabled
+- Port Status: Secure-up
+- Violation Mode: Shutdown
+- Maximum MAC Addresses: 1
+- Configured MAC Addresses: 1
+- Sticky MAC Addresses: 0
+- Secure MAC: 0cfc.d7e1.0000, VLAN 300
+- Security Violation Count: 0
+
+Result: PASS
+
+
+BEHAVIORAL TESTING
+==================
+
+1. Shutdown Violation Mode
+--------------------------
+An unauthorized MAC address (0c27.115a.0000) was connected to SW1 Gi0/2 while
+Gi0/2 was secured for the legitimate sticky MAC 0cab.17df.0000.
+
+Observed messages included:
+%PM-4-ERR_DISABLE: psecure-violation error detected on Gi0/2, putting Gi0/2 in err-disable state
+%PORT_SECURITY-2-PSECURE_VIOLATION: Security violation occurred, caused by MAC address 0c27.115a.0000 on port GigabitEthernet0/2.
+
+Observed state:
+- Port Status: Secure-shutdown
+- Violation Mode: Shutdown
+- Security Violation Count increased
+
+Result: PASS
+
+
+2. Manual Recovery
+------------------
+The err-disabled secured interface was manually recovered after the violation.
+
+Observed after recovery:
+- Port Status returned to Secure-up
+- The sticky secure MAC remained installed
+- The historical violation counter remained recorded
+
+Result: PASS
+
+
+3. Restrict Violation Mode
+--------------------------
+The unauthorized endpoint was connected while Gi0/2 used Restrict mode.
+
+Observed:
+- Gi0/2 remained Secure-up
+- Unauthorized traffic was discarded
+- Authorized endpoint traffic continued successfully
+- Security Violation Count increased repeatedly
+- Port Security violation Syslog messages were generated
+- The interface did not enter the psecure err-disabled state
+
+Result: PASS
+
+
+4. Protect Violation Mode
+-------------------------
+The unauthorized endpoint was connected while Gi0/2 used Protect mode.
+
+Observed:
+- Gi0/2 remained Secure-up
+- Unauthorized endpoint traffic was discarded
+- The unauthorized endpoint could not obtain a DHCP lease
+- Authorized endpoint connectivity continued
+- The Security Violation Count remained unchanged at 177 during the Protect test
+- No new Port Security violation Syslog messages were observed for the Protect-mode attempts
+
+Operational troubleshooting lesson:
+A client that cannot obtain DHCP may be blocked at Layer 2 by Port Security before
+its DHCP Discover reaches the DHCP server.
+
+Result: PASS
+
+
+5. ErrDisable Recovery Test
+---------------------------
+Automatic recovery for psecure-violation was temporarily enabled with a
+120-second interval to validate IOS behavior.
+
+Verification showed:
+- psecure-violation recovery cause: Enabled
+- Timer interval: 120 seconds
+- Gi0/2 listed for recovery after the Port Security shutdown violation
+
+Recovery message:
+%PM-4-ERR_RECOVER: Attempting to recover from psecure-violation err-disable state on Gi0/2
+
+The interface returned to up/up. Because the unauthorized endpoint remained
+connected, it generated another Port Security violation shortly afterward and
+the port returned to the disabled condition.
+
+Operational conclusion:
+ErrDisable Recovery retries the interface; it does not remove the underlying
+cause of the security violation. Critical management/server ports therefore use
+manual recovery in the final design.
+
+Result: PASS
+
+
+6. Dynamic vs Static Secure MAC Behavior
+----------------------------------------
+SW5 Gi0/1 initially learned the server MAC 0c61.24c3.0000 as SecureDynamic.
+Attempting to configure the same address statically while the dynamic secure
+entry still existed produced a duplicate MAC-address error.
+
+After Gi0/1 was administratively shut down:
+- Current secure address count changed from 1 to 0
+- The SecureDynamic MAC disappeared from the Port Security address table
+
+The MAC was then configured explicitly. Final verification showed:
+200    0c61.24c3.0000    SecureConfigured    Gi0/1
+
+This verified that a dynamically learned secure MAC is removed when the secured
+interface goes down, while a statically configured secure MAC remains part of
+the configured Port Security policy.
+
+Result: PASS
+
+
+FINAL RESULT
+============
+PASS
+
+Port Security is deployed on the intended endpoint-facing access ports across
+SW1-SW5. User-facing ports use one sticky secure MAC with Restrict mode.
+Management and server-facing ports use one statically configured secure MAC
+with Shutdown mode. The lab also validated Shutdown, Restrict, Protect, manual
+recovery, temporary automatic ErrDisable Recovery, sticky persistence, and
+SecureDynamic-to-SecureConfigured behavior.

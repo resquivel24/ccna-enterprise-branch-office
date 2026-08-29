@@ -177,12 +177,18 @@ Detailed addressing information is available in:
 - TACACS+ privilege-level 15 command authorization
 - Local authentication fallback and console recovery
 - NAT boundary controls
+- Port Security on endpoint-facing access ports
+- Sticky secure MAC learning on user access ports
+- Static secure MAC assignments on management and server ports
+- Restrict and Shutdown violation policies based on endpoint role
 
 Centralized AAA is implemented across R1, DSW1, DSW2, and SW1 through SW5 using the `AUT-SRV-AAA` appliance at `10.0.1.106/27` in Management VLAN 99.
 
 The AAA design was verified for centralized SSH authentication, EXEC authorization, privilege-level 15 command authorization, local fallback during TACACS+ server unavailability, local-only console recovery, and EXEC session accounting.
 
-Additional Layer 2 security features are being added as the security portion of the curriculum is reviewed.
+Port Security is implemented and verified on the endpoint-facing access ports of SW1 through SW5. User-facing ports use one sticky secure MAC address with Restrict mode, while management and server-facing ports use one statically configured secure MAC address with Shutdown mode and manual recovery after a violation.
+
+Additional Layer 2 security controls will be added as DHCP Snooping and Dynamic ARP Inspection are implemented and verified.
 
 ---
 
@@ -220,6 +226,42 @@ Sensitive TACACS+ shared secrets and account passwords are intentionally exclude
 Detailed AAA verification is available in:
 
 [`verification/aaa-verification.txt`](verification/aaa-verification.txt)
+
+---
+
+## Port Security
+
+Port Security is deployed on endpoint-facing access interfaces across SW1 through SW5 to restrict unauthorized Layer 2 access.
+
+The final policy is based on endpoint role:
+
+| Endpoint Type | Maximum Secure MACs | Secure MAC Method | Violation Mode | Recovery Policy          |
+| ------------- | ------------------: | ----------------- | -------------- | ------------------------ |
+| User PCs      |                   1 | Sticky            | Restrict       | Port remains operational |
+| Management PC |                   1 | Static            | Shutdown       | Manual recovery          |
+| Servers       |                   1 | Static            | Shutdown       | Manual recovery          |
+
+User access ports on SW1, SW2, and SW3 use sticky learning with Restrict mode. This blocks traffic from unauthorized source MAC addresses while keeping the interface operational and providing violation counters and notifications.
+
+The dedicated management workstation and server-facing ports on SW4 and SW5 use statically configured secure MAC addresses with Shutdown mode. A security violation places the affected interface into the err-disabled state, and the final design requires an administrator to verify that the cause has been removed before manually restoring service.
+
+Testing validated:
+
+- Shutdown, Restrict, and Protect violation behavior
+- Secure MAC address limits
+- Sticky secure MAC persistence
+- Static secure MAC assignments
+- Violation counters and Port Security Syslog messages
+- Manual recovery from a Port Security shutdown
+- Temporary automatic ErrDisable Recovery
+- Repeated violations when the unauthorized endpoint remained connected after automatic recovery
+- SecureDynamic MAC removal after an interface went down
+- Conversion from SecureDynamic to SecureConfigured
+- DHCP failure when unauthorized client frames were discarded by Port Security
+
+Detailed Port Security verification is available in:
+
+[`verification/port-security-verification.txt`](verification/port-security-verification.txt)
 
 ---
 
@@ -336,6 +378,10 @@ Troubleshooting activities have included:
 - TACACS+ authentication and local-fallback behavior
 - TACACS+ command authorization
 - SSH RSA-key regeneration on DSW2
+- Port Security Shutdown, Restrict, and Protect behavior
+- Port Security err-disabled interface recovery
+- Unauthorized endpoint DHCP failure caused by Layer 2 Port Security
+- SecureDynamic and SecureConfigured MAC behavior
 
 The troubleshooting process follows a layered approach rather than changing configurations randomly.
 
@@ -348,27 +394,52 @@ Operational verification evidence is documented under:
 ## Repository Structure
 
 ```text
+
 ccna-enterprise-branch-office/
+
 │
+
 ├── README.md
+
 │
+
 ├── configs/
+
 │   └── Sanitized Cisco device configurations
+
 │
+
 ├── diagrams/
+
 │   └── enterprise-branch-office-topology.png
+
 │
+
 ├── docs/
+
 │   ├── addressing-plan.md
+
 │   └── topology.md
+
 │
+
 └── verification/
+
     ├── README.md
+
     ├── etherchannel-verification.txt
+
     ├── hsrp-verification.txt
+
     ├── aaa-verification.txt
+
     ├── ipv6-verification.txt
+
     ├── ospf-verification.txt
+
+
+    ├── port-security-verification.txt
+
     └── spanning-tree-verification.txt
 
 ```
@@ -411,6 +482,7 @@ The current verification package documents operational testing for several core 
 | LACP EtherChannel         | [`verification/etherchannel-verification.txt`](verification/etherchannel-verification.txt)   |
 | Rapid PVST+               | [`verification/spanning-tree-verification.txt`](verification/spanning-tree-verification.txt) |
 | Centralized AAA / TACACS+ | [`verification/aaa-verification.txt`](verification/aaa-verification.txt)                     |
+| Port Security             | [`verification/port-security-verification.txt`](verification/port-security-verification.txt) |
 
 The verification methodology and planned evidence are documented in:
 
@@ -429,22 +501,39 @@ Major additions are committed individually so that the repository history reflec
 Examples of project milestones include:
 
 ```text
+
 Initial repository structure
+
         ↓
+
 IPv4 / IPv6 addressing documentation
+
         ↓
+
 Topology documentation
+
         ↓
+
 Topology diagram
+
         ↓
+
 Device configurations
+
         ↓
+
 Network verification evidence
+
         ↓
+
 Centralized TACACS+ AAA
+
         ↓
+
 Layer 2 security
+
         ↓
+
 Additional CCNA features
 
 ```
@@ -503,6 +592,7 @@ The repository remains subject to a final credential and Git-history audit befor
 | Local AAA fallback            | Verified    |
 | TACACS+ EXEC accounting       | Verified    |
 | FTP configuration backup      | Verified    |
+| Port Security                 | Verified    |
 | Security hardening            | In progress |
 | Portfolio documentation       | In progress |
 
@@ -512,7 +602,6 @@ The repository remains subject to a final credential and Git-history audit befor
 
 Planned additions include further CCNA security implementation and verification, such as:
 
-- Port Security
 - DHCP Snooping
 - Dynamic ARP Inspection
 - Additional device-hardening controls

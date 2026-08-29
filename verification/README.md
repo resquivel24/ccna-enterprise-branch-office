@@ -1,6 +1,6 @@
 # Network Verification Evidence
 
-This directory contains operational verification evidence for the \***\*CCNA Enterprise Branch Office Lab\*\***.
+This directory contains operational verification evidence for the **CCNA Enterprise Branch Office Lab**.
 
 The purpose of this section is to demonstrate that the technologies documented in the device configurations were not only configured, but also tested and validated in the GNS3 environment.
 
@@ -22,15 +22,19 @@ Verification includes:
 
 Relevant verification commands include:
 
-    show vlan brief
-    show interfaces trunk
-    show spanning-tree
-    show etherchannel summary
+```text
+show vlan brief
+show interfaces trunk
+show spanning-tree
+show etherchannel summary
+```
 
 Current evidence:
 
-    spanning-tree-verification.txt
-    etherchannel-verification.txt
+```text
+spanning-tree-verification.txt
+etherchannel-verification.txt
+```
 
 ---
 
@@ -65,12 +69,16 @@ Verification includes:
 
 Relevant verification commands include:
 
-    show standby brief
-    show standby
+```text
+show standby brief
+show standby
+```
 
 Current evidence:
 
-    hsrp-verification.txt
+```text
+hsrp-verification.txt
+```
 
 ---
 
@@ -88,15 +96,19 @@ Verification includes:
 
 Relevant verification commands include:
 
-    show ip ospf neighbor
-    show ip route
-    show ip route ospf
-    ping
-    traceroute
+```text
+show ip ospf neighbor
+show ip route
+show ip route ospf
+ping
+traceroute
+```
 
 Current evidence:
 
-    ospf-verification.txt
+```text
+ospf-verification.txt
+```
 
 ---
 
@@ -119,21 +131,27 @@ Verification includes:
 
 Relevant verification commands include:
 
-    show ipv6 interface brief
-    show ipv6 neighbors
-    show ipv6 route
-    show standby brief
-    ping ipv6
+```text
+show ipv6 interface brief
+show ipv6 neighbors
+show ipv6 route
+show standby brief
+ping ipv6
+```
 
 Linux client verification includes:
 
-    ip -6 addr
-    ip -6 route
-    ping -6
+```text
+ip -6 addr
+ip -6 route
+ping -6
+```
 
 Current evidence:
 
-    ipv6-verification.txt
+```text
+ipv6-verification.txt
+```
 
 ---
 
@@ -153,12 +171,16 @@ Verification will demonstrate:
 
 Relevant verification commands and client evidence include:
 
-    show running-config interface vlan <VLAN-ID>
-    ipconfig /all
+```text
+show running-config interface vlan <VLAN-ID>
+ipconfig /all
+```
 
 Planned evidence:
 
-    dhcp-dns-verification.md
+```text
+dhcp-dns-verification.md
+```
 
 ---
 
@@ -175,12 +197,16 @@ Verification will demonstrate:
 
 Example verification commands include:
 
-    nslookup <hostname>
-    ping <hostname>
+```text
+nslookup <hostname>
+ping <hostname>
+```
 
 Planned evidence:
 
-    dhcp-dns-verification.md
+```text
+dhcp-dns-verification.md
+```
 
 ---
 
@@ -197,13 +223,17 @@ Verification will demonstrate:
 
 Relevant verification commands include:
 
-    show ip nat translations
-    show ip nat statistics
-    ping <external-destination>
+```text
+show ip nat translations
+show ip nat statistics
+ping <external-destination>
+```
 
 Planned evidence:
 
-    nat-verification.txt
+```text
+nat-verification.txt
+```
 
 ---
 
@@ -223,14 +253,16 @@ Verification will include:
 
 Relevant verification commands include:
 
-    show ssh
-    show privilege
-    show aaa method-lists
-    show snmp
-    show ntp associations
-    show ntp status
-    show access-lists
-    show logging
+```text
+show ssh
+show privilege
+show aaa method-lists
+show snmp
+show ntp associations
+show ntp status
+show access-lists
+show logging
+```
 
 Centralized AAA was validated first on SW4 and then deployed to R1, DSW1, DSW2, and SW1-SW5. Verification confirmed TACACS+ administrative login, privilege 15 access, command authorization for a restricted account, local fallback behavior, local-only console recovery, and EXEC accounting.
 
@@ -238,15 +270,84 @@ Sensitive authentication information, TACACS+ shared secrets, account passwords,
 
 Current evidence:
 
-    aaa-verification.txt
+```text
+aaa-verification.txt
+```
 
 Planned evidence:
 
-    network-management-verification.md
+```text
+network-management-verification.md
+```
 
 ---
 
-## 9. File Transfer and Server Services
+## 9. Layer 2 Security — Port Security
+
+Port Security is implemented on endpoint-facing access ports to limit which MAC addresses are permitted to use each protected interface.
+
+The final policy separates ordinary user access ports from management and server-facing ports.
+
+### User Access Ports
+
+SW1, SW2, and SW3 use:
+
+- Maximum of one secure MAC address per protected interface
+- Sticky secure MAC learning
+- Restrict violation mode
+- Continued service for the authorized endpoint when an unauthorized source is detected
+- Violation counting and notification for unauthorized traffic
+
+### Management and Server Ports
+
+SW4 and SW5 use:
+
+- Maximum of one secure MAC address per protected interface
+- Statically configured secure MAC addresses
+- Shutdown violation mode
+- Manual recovery after the cause of a security violation has been investigated and removed
+
+This stricter policy is used for the dedicated management workstation, AAA server, DHCP/DNS server, and Web/FTP server.
+
+Verification included:
+
+- Secure MAC learning
+- Sticky secure MAC persistence
+- Static secure MAC configuration
+- Maximum secure MAC enforcement
+- Shutdown violation behavior
+- Restrict violation behavior
+- Protect violation behavior
+- Security violation counters
+- Port Security Syslog messages
+- Err-disabled interface behavior
+- Manual interface recovery
+- Temporary automatic ErrDisable Recovery testing
+- Repeated violation after automatic recovery when the unauthorized endpoint remained connected
+- SecureDynamic MAC removal when an interface went down
+- Conversion from SecureDynamic to SecureConfigured
+- DHCP failure caused by unauthorized traffic being discarded at Layer 2
+
+Relevant verification commands include:
+
+```text
+show port-security
+show port-security interface <interface>
+show port-security address
+show errdisable recovery
+```
+
+The final deployment was verified across SW1-SW5.
+
+Current evidence:
+
+```text
+port-security-verification.txt
+```
+
+---
+
+## 10. File Transfer and Server Services
 
 The lab includes server-side services used for CCNA operational practice.
 
@@ -263,7 +364,7 @@ Authentication credentials are excluded from all public verification evidence.
 
 ---
 
-## 10. End-to-End Connectivity
+## 11. End-to-End Connectivity
 
 Final connectivity testing will demonstrate communication across the enterprise topology.
 
@@ -284,14 +385,18 @@ Both IPv4 and IPv6 connectivity will be demonstrated where those protocols are i
 
 Verification may use:
 
-    ping
-    traceroute
-    show ip route
-    show ipv6 route
+```text
+ping
+traceroute
+show ip route
+show ipv6 route
+```
 
 Planned evidence:
 
-    end-to-end-connectivity.md
+```text
+end-to-end-connectivity.md
+```
 
 ---
 
@@ -299,21 +404,26 @@ Planned evidence:
 
 The verification directory currently contains:
 
-    verification/
-    ├── README.md
-    ├── hsrp-verification.txt
-    ├── ospf-verification.txt
-    ├── etherchannel-verification.txt
-    ├── spanning-tree-verification.txt
-    ├── ipv6-verification.txt
-    └── aaa-verification.txt
+```text
+verification/
+├── README.md
+├── hsrp-verification.txt
+├── ospf-verification.txt
+├── etherchannel-verification.txt
+├── spanning-tree-verification.txt
+├── ipv6-verification.txt
+├── aaa-verification.txt
+└── port-security-verification.txt
+```
 
 Additional evidence planned as the lab is expanded and validated:
 
-    dhcp-dns-verification.md
-    nat-verification.txt
-    network-management-verification.md
-    end-to-end-connectivity.md
+```text
+dhcp-dns-verification.md
+nat-verification.txt
+network-management-verification.md
+end-to-end-connectivity.md
+```
 
 The exact contents may evolve as additional CCNA technologies are implemented and tested.
 
@@ -364,6 +474,10 @@ The verification evidence is intended to demonstrate practical understanding of:
 - TACACS+ authorization
 - TACACS+ EXEC accounting
 - Local AAA fallback and console recovery
+- Port Security
+- Secure MAC address control
+- Port Security violation modes
+- Err-disabled interface recovery
 - SNMP
 - Syslog
 - NTP

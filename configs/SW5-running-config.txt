@@ -58,6 +58,14 @@ spanning-tree mode pvst
 spanning-tree extend system-id
 !
 ! ------------------------------------------------
+! DHCP Snooping
+! ------------------------------------------------
+!
+ip dhcp snooping
+ip dhcp snooping vlan 99,200,300
+no ip dhcp snooping information option
+!
+! ------------------------------------------------
 ! Trunk Toward R1
 ! ------------------------------------------------
 !
@@ -67,6 +75,7 @@ interface GigabitEthernet0/0
  switchport trunk encapsulation dot1q
  switchport trunk native vlan 999
  switchport mode trunk
+ ip dhcp snooping trust
  negotiation auto
 !
 ! ------------------------------------------------
@@ -77,12 +86,21 @@ interface GigabitEthernet0/1
  description DHCP-DNS server
  switchport access vlan 200
  switchport mode access
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation shutdown
+ switchport port-security mac-address 0c61.24c3.0000
+ ip dhcp snooping trust
  negotiation auto
 !
 interface GigabitEthernet0/2
  description Web-FTP server
  switchport access vlan 300
  switchport mode access
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation shutdown
+ switchport port-security mac-address 0cfc.d7e1.0000
  negotiation auto
 !
 ! ------------------------------------------------

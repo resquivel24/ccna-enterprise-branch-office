@@ -1,0 +1,158 @@
+CCNA ENTERPRISE BRANCH OFFICE LAB
+DHCP SNOOPING VERIFICATION
+================================
+
+Purpose
+-------
+Validate the final DHCP Snooping deployment across the access layer, confirm
+trusted/untrusted port behavior, verify DHCP binding creation, demonstrate
+rate-limit protection, and document the IOSvL2/GNS3 relay limitation observed
+on the distribution layer.
+
+Final Deployment
+----------------
+Distribution layer:
+- DSW1 and DSW2 retain DHCP Snooping globally enabled.
+- No client VLANs are configured for DHCP Snooping on DSW1 or DSW2.
+- This is intentional because the IOSvL2/GNS3 image used in the lab failed to
+  relay DHCP through an SVI when DHCP Snooping was active on the relay VLAN.
+- DSW1 retains the default Option 82 behavior.
+- DSW2 has Option 82 disabled.
+
+Access layer:
+- SW1-SW4: DHCP Snooping enabled for VLANs 10,20,30,99.
+- SW1-SW4: Gi0/0 and Gi0/1 are trusted uplinks.
+- SW1-SW4: Gi0/2 and Gi0/3 are untrusted endpoint-facing ports.
+- SW5: DHCP Snooping enabled for VLANs 99,200,300.
+- SW5 Gi0/0 is trusted toward R1.
+- SW5 Gi0/1 is trusted toward the legitimate DHCP/DNS server.
+- SW5 Gi0/2 remains untrusted.
+
+SW5 Trust-Boundary Correction
+-----------------------------
+During testing, SW5 Gi0/0 was initially left untrusted.
+
+Relayed DHCP DISCOVER messages arrived from R1 with a nonzero giaddr.
+SW5 rejected these packets and generated a DHCP Snooping message indicating
+that a DHCP message with nonzero giaddr had arrived on an untrusted port.
+
+After Gi0/0 was configured as trusted, DHCP relay operation was restored.
+
+This confirmed that both of the following SW5 ports must be trusted in the
+implemented topology:
+- Gi0/0 toward R1
+- Gi0/1 toward the legitimate DHCP/DNS server
+
+Distribution-Layer IOSvL2/GNS3 Limitation
+-----------------------------------------
+The intended design originally enabled DHCP Snooping on the distribution
+switches for the client VLANs while the DSW SVIs acted as DHCP relay agents.
+
+Observed behavior on DSW1:
+- A valid DHCP DISCOVER was received from the client VLAN.
+- DHCP Snooping statistics showed the packet entering normally.
+- No Snooping drop was recorded.
+- The SVI relay process did not emit the relayed DHCP packet toward R1/server.
+- Trusting the routed uplink did not resolve the issue.
+- Removing the client VLAN from DHCP Snooping immediately restored relay
+  operation.
+
+Packet capture then confirmed the expected relay exchange:
+- Relay request sourced from the SVI toward DHCP server 10.0.2.2
+- DHCP reply returned from the server
+
+Because Cisco DHCP Snooping and DHCP relay are conceptually compatible, this
+behavior was treated as an IOSvL2/GNS3 platform limitation rather than a
+design error.
+
+DHCP Snooping Binding Verification
+----------------------------------
+A successful DHCP lease populated the Snooping binding table on SW1.
+
+Verified entries included:
+
+0C:27:11:5A:00:00   10.0.1.7   dhcp-snooping   VLAN10   Gi0/3
+0C:AB:17:DF:00:00   10.0.1.6   dhcp-snooping   VLAN10   Gi0/2
+
+Result: PASS
+
+The switch successfully learned valid DHCP client bindings containing the
+client MAC address, assigned IP address, VLAN, and access interface.
+
+Rate-Limit Protection Test
+--------------------------
+Test interface:
+SW1 Gi0/2
+
+Configured DHCP Snooping rate:
+10 packets per second
+
+A packet-generation test sent DHCP-like UDP traffic from client port 68 to
+server port 67 at approximately 20 packets per second.
+
+Observed result:
+- SW1 detected that the DHCP rate exceeded the configured threshold.
+- Gi0/2 entered the err-disabled state with cause dhcp-rate-limit.
+- Manual shutdown/no shutdown successfully restored the interface.
+- The 10 pps DHCP Snooping rate-limit policy remained configured.
+
+Result: PASS
+
+This demonstrated DHCP Snooping protection against excessive DHCP request
+traffic such as a DHCP starvation-style flood.
+
+Rogue DHCP Server Test
+----------------------
+Test source:
+PC7 connected to SW4 Gi0/2, an untrusted access port.
+
+A forged DHCP OFFER was generated from the untrusted endpoint.
+
+Observed SW4 result:
+- The switch generated a DHCP Snooping untrusted-port violation message.
+- The DHCP Snooping drop counter increased.
+- The forged server response was not accepted through the untrusted port.
+
+Result: PASS
+
+This demonstrated that DHCP server messages such as OFFERs are blocked when
+received from an untrusted access port.
+
+DHCP MAC/chaddr Consistency Test
+-------------------------------
+Test source:
+PC7 connected to SW4 Gi0/2.
+
+The Ethernet frame used PC7's real source MAC address:
+0c6e.d8c4.0000
+
+The DHCP message used a different fake client hardware address:
+0211.2233.4455
+
+Observed SW4 result:
+- The switch generated a DHCP Snooping MATCH_MAC_FAIL message.
+- The DHCP Snooping drop counter increased.
+- The inconsistent DHCP message was discarded.
+
+Result: PASS
+
+This demonstrated validation between the Ethernet source MAC address and the
+DHCP client hardware address field.
+
+Final Verification Result
+-------------------------
+PASS
+
+The final DHCP Snooping implementation successfully demonstrated:
+- Global and per-VLAN Snooping deployment at the access layer
+- Trusted and untrusted port boundaries
+- Correct SW5 relay/server trust design
+- DHCP binding-table learning
+- DHCP rate limiting and err-disable behavior
+- Rogue DHCP server protection
+- Ethernet source MAC versus DHCP chaddr validation
+- Correct handling of an IOSvL2/GNS3 SVI relay limitation without changing
+  the intended CCNA security concepts
+
+The feature is considered fully validated for the CCNA Enterprise Branch
+Office portfolio lab.

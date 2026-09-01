@@ -1,0 +1,275 @@
+CCNA ENTERPRISE BRANCH OFFICE LAB
+DYNAMIC ARP INSPECTION (DAI) VERIFICATION
+=========================================
+
+Purpose
+-------
+Verify the Dynamic ARP Inspection deployment on the access layer and record
+observed behavior for legitimate ARP traffic and forged ARP protection.
+
+DAI builds on the DHCP Snooping binding database. On untrusted interfaces,
+ARP sender information is validated against legitimate DHCP-learned bindings.
+Infrastructure-facing uplinks are trusted so infrastructure ARP traffic is not
+subjected to endpoint binding validation.
+
+
+FINAL DEPLOYMENT
+================
+
+Access switches SW1-SW4:
+- DAI enabled for VLANs 10, 20, 30, and 99
+- Gi0/0 trusted
+- Gi0/1 trusted
+- Endpoint-facing Gi0/2 and Gi0/3 untrusted
+- Default ARP inspection rate on untrusted interfaces retained at 15 packets
+  per second with a 1-second burst interval
+
+No additional source-MAC, destination-MAC, or IP address validation options
+were enabled.
+
+
+SW1 VERIFICATION
+================
+
+SW1#show ip arp inspection
+
+Source Mac Validation      : Disabled
+Destination Mac Validation : Disabled
+IP Address Validation      : Disabled
+
+ Vlan     Configuration    Operation
+ ----     -------------    ---------
+   10     Enabled          Active
+   20     Enabled          Inactive
+   30     Enabled          Inactive
+   99     Enabled          Active
+
+SW1#show ip arp inspection interfaces
+
+ Interface        Trust State     Rate (pps)    Burst Interval
+ ---------------  -----------     ----------    --------------
+ Gi0/0            Trusted               None               N/A
+ Gi0/1            Trusted               None               N/A
+ Gi0/2            Untrusted               15                 1
+ Gi0/3            Untrusted               15                 1
+
+Result: PASS
+
+
+SW2 VERIFICATION
+================
+
+DAI enabled for VLANs 10, 20, 30, and 99.
+
+Observed operational state:
+- VLAN 20: Active
+- VLAN 99: Active
+- VLAN 10: Inactive
+- VLAN 30: Inactive
+
+Interface trust state:
+- Gi0/0: Trusted
+- Gi0/1: Trusted
+- Gi0/2: Untrusted, default 15 pps
+- Gi0/3: Untrusted, default 15 pps
+
+Result: PASS
+
+
+SW3 VERIFICATION
+================
+
+DAI enabled for VLANs 10, 20, 30, and 99.
+
+Observed operational state:
+- VLAN 30: Active
+- VLAN 99: Active
+- VLAN 10: Inactive
+- VLAN 20: Inactive
+
+Interface trust state:
+- Gi0/0: Trusted
+- Gi0/1: Trusted
+- Gi0/2: Untrusted, default 15 pps
+- Gi0/3: Untrusted, default 15 pps
+
+Result: PASS
+
+
+SW4 VERIFICATION
+================
+
+DAI enabled for VLANs 10, 20, 30, and 99.
+
+Observed operational state:
+- VLAN 99: Active
+- VLANs 10, 20, and 30: Inactive
+
+Interface trust state:
+- Gi0/0: Trusted
+- Gi0/1: Trusted
+- Gi0/2: Untrusted, default 15 pps
+- Gi0/3: Untrusted, default 15 pps
+
+Result: PASS
+
+
+BEHAVIORAL TESTING
+==================
+
+1. Initial Trust-Boundary Observation
+-------------------------------------
+
+When DAI was first enabled on SW1 VLAN 99, Gi0/0 and Gi0/1 were still in their
+default untrusted state. Infrastructure ARP requests arriving from the
+distribution layer were inspected against the DHCP Snooping binding database
+and rejected.
+
+Observed Syslog messages:
+
+%SW_DAI-4-DHCP_SNOOPING_DENY: 1 Invalid ARPs (Req) on Gi0/0, vlan 99.
+%SW_DAI-4-DHCP_SNOOPING_DENY: 1 Invalid ARPs (Req) on Gi0/1, vlan 99.
+
+The ARP sender was DSW1 VLAN 99:
+- Sender IP: 10.0.1.97
+- Sender MAC: 0c67.512b.8063
+
+Because the infrastructure SVI does not obtain its address through DHCP, there
+was no DHCP Snooping endpoint binding for that IP/MAC pair. After Gi0/0 and
+Gi0/1 were configured as trusted DAI interfaces, infrastructure ARP traffic was
+no longer subjected to endpoint binding validation.
+
+Operational lesson:
+DAI trust boundaries must be configured correctly for infrastructure-facing
+links before relying on DHCP Snooping bindings to validate endpoint traffic.
+
+Result: PASS
+
+
+2. DHCP Snooping Binding Prerequisite
+-------------------------------------
+
+SW1 contained these DHCP Snooping bindings before DAI validation:
+
+MacAddress          IpAddress        Type           VLAN  Interface
+------------------  ---------------  -------------  ----  --------------------
+0C:27:11:5A:00:00   10.0.1.7         dhcp-snooping   10    GigabitEthernet0/3
+0C:AB:17:DF:00:00   10.0.1.6         dhcp-snooping   10    GigabitEthernet0/2
+
+These entries provide trusted IP/MAC/interface information used by DAI on
+untrusted access ports.
+
+Result: PASS
+
+
+3. Legitimate ARP Validation
+----------------------------
+
+PC1:
+- IPv4 address: 10.0.1.6/27
+- DHCP Snooping MAC: 0C:AB:17:DF:00:00
+- Access interface: SW1 Gi0/2
+- VLAN: 10
+- Default gateway: 10.0.1.3
+
+PC1 successfully pinged the VLAN 10 HSRP default gateway.
+
+SW1#show ip arp inspection statistics vlan 10
+
+ Vlan      Forwarded        Dropped     DHCP Drops      ACL Drops
+ ----      ---------        -------     ----------      ---------
+   10             49              0              0              0
+
+ Vlan   DHCP Permits    ACL Permits  Probe Permits   Source MAC Failures
+ ----   ------------    -----------  -------------   -------------------
+   10             14              0              9                     0
+
+ Vlan   Dest MAC Failures   IP Validation Failures   Invalid Protocol Data
+ ----   -----------------   ----------------------   ---------------------
+   10                   0                        0                       0
+
+Observed result:
+- Legitimate ARP traffic was forwarded.
+- DHCP-validated ARP traffic was permitted.
+- No DAI drops occurred for the legitimate endpoint.
+
+Result: PASS
+
+
+4. Forged ARP Protection
+------------------------
+
+A controlled forged ARP request was generated from the management host on
+SW4 Gi0/2, an untrusted DAI interface.
+
+Real management host information:
+- Real IP: 10.0.1.105
+- Real MAC: 0c6e.d8c4.0000
+- VLAN: 99
+- Interface: SW4 Gi0/2
+
+The forged ARP retained the host's real source MAC but falsely claimed:
+- Sender IP: 10.0.1.110
+- Target IP: 10.0.1.99
+
+SW4 rejected the ARP request.
+
+Observed Syslog message:
+
+%SW_DAI-4-DHCP_SNOOPING_DENY: 1 Invalid ARPs (Req) on Gi0/2, vlan 99.
+([0c6e.d8c4.0000/10.0.1.110/0000.0000.0000/10.0.1.99/...])
+
+SW4#show ip arp inspection statistics vlan 99
+
+ Vlan      Forwarded        Dropped     DHCP Drops      ACL Drops
+ ----      ---------        -------     ----------      ---------
+   99              6              1              1              0
+
+ Vlan   DHCP Permits    ACL Permits  Probe Permits   Source MAC Failures
+ ----   ------------    -----------  -------------   -------------------
+   99              3              0              0                     0
+
+ Vlan   Dest MAC Failures   IP Validation Failures   Invalid Protocol Data
+ ----   -----------------   ----------------------   ---------------------
+   99                   0                        0                       0
+
+Observed result:
+- The forged ARP entered through an untrusted access port.
+- The claimed sender information was not accepted as legitimate.
+- DAI discarded the ARP request.
+- The DHCP Drops counter increased to 1.
+- IOS generated an explicit DAI denial Syslog message.
+
+Result: PASS
+
+
+5. ARP Rate-Limit Policy
+------------------------
+
+The IOS default DAI rate limit of 15 ARP packets per second with a 1-second
+burst interval was retained on untrusted interfaces.
+
+No additional ARP-flood test was performed. The default 15 pps protection was
+retained as sufficient for this CCNA lab, avoiding redundant err-disable
+testing already demonstrated during DHCP Snooping rate-limit validation.
+
+Result: PASS
+
+
+FINAL RESULT
+============
+
+PASS
+
+Dynamic ARP Inspection is deployed across SW1-SW4 for VLANs 10, 20, 30, and
+99. Infrastructure-facing uplinks are trusted, while endpoint-facing access
+ports remain untrusted and retain the default 15 pps ARP inspection rate.
+
+The lab verified both sides of DAI operation:
+- Legitimate DHCP-bound endpoint ARP traffic was permitted.
+- A deliberately forged ARP sender claim on an untrusted access port was
+  detected and discarded.
+
+The verification also demonstrated the operational dependency between DHCP
+Snooping and DAI: DHCP Snooping provides the binding information that DAI uses
+to validate ARP sender claims on untrusted interfaces.

@@ -64,6 +64,17 @@ spanning-tree vlan 10,30,999 priority 24576
 spanning-tree vlan 20,99 priority 28672
 !
 ! ------------------------------------------------
+! DHCP Snooping
+! ------------------------------------------------
+!
+! DHCP Snooping remains globally enabled for feature availability.
+! Client VLAN inspection is intentionally not enabled on DSW1 because
+! the IOSvL2/GNS3 image used in this lab failed to relay DHCP through
+! an SVI when DHCP Snooping was active on the relay VLAN.
+!
+ip dhcp snooping
+!
+! ------------------------------------------------
 ! EtherChannel Between Distribution Switches
 ! ------------------------------------------------
 !

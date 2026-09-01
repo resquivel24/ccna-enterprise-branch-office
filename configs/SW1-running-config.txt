@@ -57,6 +57,20 @@ spanning-tree mode rapid-pvst
 spanning-tree extend system-id
 !
 ! ------------------------------------------------
+! DHCP Snooping
+! ------------------------------------------------
+!
+ip dhcp snooping
+ip dhcp snooping vlan 10,20,30,99
+no ip dhcp snooping information option
+!
+! ------------------------------------------------
+! Dynamic ARP Inspection
+! ------------------------------------------------
+!
+ip arp inspection vlan 10,20,30,99
+!
+! ------------------------------------------------
 ! Redundant Distribution-Layer Trunks
 ! ------------------------------------------------
 !
@@ -66,6 +80,8 @@ interface GigabitEthernet0/0
  switchport trunk encapsulation dot1q
  switchport trunk native vlan 999
  switchport mode trunk
+ ip dhcp snooping trust
+ ip arp inspection trust
  negotiation auto
 !
 interface GigabitEthernet0/1
@@ -74,6 +90,8 @@ interface GigabitEthernet0/1
  switchport trunk encapsulation dot1q
  switchport trunk native vlan 999
  switchport mode trunk
+ ip dhcp snooping trust
+ ip arp inspection trust
  negotiation auto
 !
 ! ------------------------------------------------
@@ -84,6 +102,12 @@ interface GigabitEthernet0/2
  description Engineering endpoint - PC1
  switchport access vlan 10
  switchport mode access
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 0cab.17df.0000
+ ip dhcp snooping limit rate 10
  negotiation auto
  spanning-tree portfast edge
 !
@@ -91,6 +115,11 @@ interface GigabitEthernet0/3
  description Engineering endpoint - PC2
  switchport access vlan 10
  switchport mode access
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ switchport port-security mac-address sticky 0c27.115a.0000
  negotiation auto
  spanning-tree portfast edge
 !

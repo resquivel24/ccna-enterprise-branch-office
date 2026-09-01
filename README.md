@@ -181,6 +181,10 @@ Detailed addressing information is available in:
 - Sticky secure MAC learning on user access ports
 - Static secure MAC assignments on management and server ports
 - Restrict and Shutdown violation policies based on endpoint role
+- DHCP Snooping on access-layer client and server VLANs
+- DHCP Snooping trusted/untrusted port boundaries and rate limiting
+- Dynamic ARP Inspection on user and management access VLANs
+- DHCP Snooping binding-table validation for DAI
 
 Centralized AAA is implemented across R1, DSW1, DSW2, and SW1 through SW5 using the `AUT-SRV-AAA` appliance at `10.0.1.106/27` in Management VLAN 99.
 
@@ -188,7 +192,9 @@ The AAA design was verified for centralized SSH authentication, EXEC authorizati
 
 Port Security is implemented and verified on the endpoint-facing access ports of SW1 through SW5. User-facing ports use one sticky secure MAC address with Restrict mode, while management and server-facing ports use one statically configured secure MAC address with Shutdown mode and manual recovery after a violation.
 
-Additional Layer 2 security controls will be added as DHCP Snooping and Dynamic ARP Inspection are implemented and verified.
+DHCP Snooping is implemented and verified across the access layer. The deployment includes trusted uplinks and server-facing paths, untrusted endpoint ports, DHCP binding-table learning, rate limiting, rogue DHCP server protection, and DHCP source-MAC/chaddr consistency validation.
+
+Dynamic ARP Inspection is implemented and verified on SW1 through SW4 for VLANs 10, 20, 30, and 99. DAI uses the DHCP Snooping binding table to validate ARP traffic on untrusted endpoint-facing ports while infrastructure-facing uplinks are explicitly trusted.
 
 ---
 
@@ -262,6 +268,50 @@ Testing validated:
 Detailed Port Security verification is available in:
 
 [`verification/port-security-verification.txt`](verification/port-security-verification.txt)
+
+---
+
+## DHCP Snooping
+
+DHCP Snooping is deployed at the access layer to establish trusted DHCP paths and protect client VLANs from unauthorized DHCP server traffic.
+
+The final deployment uses:
+
+- SW1 through SW4: DHCP Snooping on VLANs 10, 20, 30, and 99
+- SW1 through SW4: trusted infrastructure uplinks and untrusted endpoint-facing ports
+- SW5: DHCP Snooping on VLANs 99, 200, and 300
+- SW5 Gi0/0 trusted toward R1 because relayed DHCP messages arrive with a nonzero `giaddr`
+- SW5 Gi0/1 trusted toward the legitimate DHCP/DNS server
+- DHCP Snooping rate limiting on SW1 Gi0/2 at 10 packets per second
+
+Testing validated DHCP binding-table learning, rate-limit err-disable behavior, rogue DHCP OFFER rejection on an untrusted port, and Ethernet source-MAC versus DHCP `chaddr` consistency checking.
+
+During implementation, the IOSvL2/GNS3 distribution-switch image failed to relay DHCP through an SVI when DHCP Snooping was enabled on the relay VLAN. Because DHCP Snooping and SVI relay are conceptually compatible, the behavior was documented as a platform limitation. DSW1 and DSW2 therefore retain DHCP Snooping globally enabled without client VLAN inspection.
+
+Detailed DHCP Snooping verification is available in:
+
+[`verification/dhcp-snooping-verification.txt`](verification/dhcp-snooping-verification.txt)
+
+---
+
+## Dynamic ARP Inspection
+
+Dynamic ARP Inspection is deployed on SW1 through SW4 for VLANs 10, 20, 30, and 99.
+
+The final trust model uses:
+
+- Gi0/0 and Gi0/1 as trusted infrastructure-facing uplinks
+- Gi0/2 and Gi0/3 as untrusted endpoint-facing interfaces
+- The default DAI untrusted-interface ARP rate of 15 packets per second
+- DHCP Snooping bindings as the validation source for dynamically addressed clients
+
+Legitimate ARP operation was verified through normal client-to-HSRP gateway connectivity. A forged ARP request from PC7 on SW4 Gi0/2 used the real Ethernet source MAC with a false sender IP address. DAI rejected the packet, generated a `DHCP_SNOOPING_DENY` Syslog message, and incremented the VLAN 99 DAI drop counter.
+
+Testing also demonstrated the importance of the DAI trust boundary: infrastructure SVI ARP traffic was initially rejected while uplinks were untrusted because static SVI addresses do not appear in the DHCP Snooping binding table. Trusting the infrastructure-facing uplinks resolved the condition.
+
+Detailed DAI verification is available in:
+
+[`verification/dai-verification.txt`](verification/dai-verification.txt)
 
 ---
 
@@ -382,6 +432,13 @@ Troubleshooting activities have included:
 - Port Security err-disabled interface recovery
 - Unauthorized endpoint DHCP failure caused by Layer 2 Port Security
 - SecureDynamic and SecureConfigured MAC behavior
+- DHCP Snooping with SVI-based DHCP relay on IOSvL2/GNS3
+- DHCP Snooping nonzero `giaddr` trust behavior on SW5
+- DHCP Snooping rate-limit err-disable behavior
+- Rogue DHCP server response rejection
+- DHCP Ethernet source-MAC and `chaddr` mismatch validation
+- DAI trust-boundary behavior for infrastructure SVI ARP traffic
+- Forged ARP rejection using DHCP Snooping bindings
 
 The troubleshooting process follows a layered approach rather than changing configurations randomly.
 
@@ -440,6 +497,10 @@ ccna-enterprise-branch-office/
 
     ├── port-security-verification.txt
 
+    ├── dhcp-snooping-verification.txt
+
+    ├── dai-verification.txt
+
     └── spanning-tree-verification.txt
 
 ```
@@ -483,6 +544,8 @@ The current verification package documents operational testing for several core 
 | Rapid PVST+               | [`verification/spanning-tree-verification.txt`](verification/spanning-tree-verification.txt) |
 | Centralized AAA / TACACS+ | [`verification/aaa-verification.txt`](verification/aaa-verification.txt)                     |
 | Port Security             | [`verification/port-security-verification.txt`](verification/port-security-verification.txt) |
+| DHCP Snooping             | [`verification/dhcp-snooping-verification.txt`](verification/dhcp-snooping-verification.txt) |
+| Dynamic ARP Inspection    | [`verification/dai-verification.txt`](verification/dai-verification.txt)                     |
 
 The verification methodology and planned evidence are documented in:
 
@@ -593,6 +656,8 @@ The repository remains subject to a final credential and Git-history audit befor
 | TACACS+ EXEC accounting       | Verified    |
 | FTP configuration backup      | Verified    |
 | Port Security                 | Verified    |
+| DHCP Snooping                 | Verified    |
+| Dynamic ARP Inspection        | Verified    |
 | Security hardening            | In progress |
 | Portfolio documentation       | In progress |
 
@@ -600,11 +665,14 @@ The repository remains subject to a final credential and Git-history audit befor
 
 ## Next Development Areas
 
-Planned additions include further CCNA security implementation and verification, such as:
+Port Security, DHCP Snooping, and Dynamic ARP Inspection have now been implemented and verified.
 
-- DHCP Snooping
-- Dynamic ARP Inspection
+Planned additions include:
+
 - Additional device-hardening controls
+- Remaining CCNA switching and infrastructure verification
+- Wireless implementation and verification in Cisco Packet Tracer
+- Network automation and RESTCONF exercises
 
 Additional verification evidence will also be captured for technologies that are already operational but do not yet have dedicated verification files.
 

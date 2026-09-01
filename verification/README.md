@@ -347,7 +347,97 @@ port-security-verification.txt
 
 ---
 
-## 10. File Transfer and Server Services
+## 10. Layer 2 Security — DHCP Snooping
+
+DHCP Snooping is implemented at the access layer to establish trusted DHCP paths, build valid client bindings, and block unauthorized DHCP server behavior on untrusted interfaces.
+
+Final deployment:
+
+- SW1 through SW4 inspect VLANs 10, 20, 30, and 99
+- Gi0/0 and Gi0/1 are trusted infrastructure-facing uplinks on SW1 through SW4
+- Gi0/2 and Gi0/3 remain untrusted endpoint-facing interfaces
+- SW5 inspects VLANs 99, 200, and 300
+- SW5 Gi0/0 is trusted toward R1 because relayed DHCP messages arrive with a nonzero `giaddr`
+- SW5 Gi0/1 is trusted toward the legitimate DHCP/DNS server
+- SW5 Gi0/2 remains untrusted
+- SW1 Gi0/2 uses a DHCP Snooping rate limit of 10 packets per second
+
+Verification included:
+
+- DHCP Snooping binding-table creation
+- Trusted and untrusted port behavior
+- DHCP rate limiting
+- Err-disabled state caused by `dhcp-rate-limit`
+- Manual interface recovery
+- Rogue DHCP OFFER rejection on an untrusted port
+- Ethernet source-MAC versus DHCP `chaddr` consistency validation
+- SW5 nonzero-`giaddr` trust-boundary behavior
+- IOSvL2/GNS3 SVI-relay limitation investigation on DSW1/DSW2
+
+The IOSvL2/GNS3 image used for the distribution switches failed to relay DHCP through an SVI when DHCP Snooping was active on the relay VLAN. Because DHCP relay and DHCP Snooping are conceptually compatible, the behavior is documented as a platform limitation. DSW1 and DSW2 therefore retain DHCP Snooping globally enabled without client VLAN inspection.
+
+Relevant verification commands include:
+
+```text
+show ip dhcp snooping
+show ip dhcp snooping binding
+show ip dhcp snooping statistics
+show interfaces status err-disabled
+```
+
+Current evidence:
+
+```text
+dhcp-snooping-verification.txt
+```
+
+---
+
+## 11. Layer 2 Security — Dynamic ARP Inspection
+
+Dynamic ARP Inspection is implemented on SW1 through SW4 for VLANs 10, 20, 30, and 99.
+
+DAI relies on the DHCP Snooping binding table to validate ARP traffic received on untrusted endpoint-facing interfaces.
+
+Final trust model:
+
+- Gi0/0 and Gi0/1 are trusted infrastructure-facing uplinks
+- Gi0/2 and Gi0/3 are untrusted endpoint-facing ports
+- The default untrusted-interface ARP rate of 15 packets per second is retained
+- Optional source-MAC, destination-MAC, and IP validation checks remain disabled
+- DHCP Snooping bindings provide the primary validation source for dynamic clients
+
+Verification included:
+
+- DAI activation by VLAN
+- Trusted versus untrusted interface behavior
+- Legitimate ARP operation from DHCP clients
+- Successful client reachability to the HSRP virtual gateway
+- Forged ARP rejection
+- DAI drop-counter increments
+- `DHCP_SNOOPING_DENY` Syslog evidence
+- Trust-boundary behavior for infrastructure SVI ARP traffic not present in the DHCP Snooping binding table
+
+During initial deployment, infrastructure SVI ARP traffic was rejected before the uplinks were marked trusted. This confirmed that static infrastructure addresses not learned through DHCP should not be subjected to binding-table validation on untrusted links.
+
+Relevant verification commands include:
+
+```text
+show ip arp inspection
+show ip arp inspection interfaces
+show ip arp inspection statistics
+show ip dhcp snooping binding
+```
+
+Current evidence:
+
+```text
+dai-verification.txt
+```
+
+---
+
+## 12. File Transfer and Server Services
 
 The lab includes server-side services used for CCNA operational practice.
 
@@ -364,7 +454,7 @@ Authentication credentials are excluded from all public verification evidence.
 
 ---
 
-## 11. End-to-End Connectivity
+## 13. End-to-End Connectivity
 
 Final connectivity testing will demonstrate communication across the enterprise topology.
 
@@ -413,7 +503,9 @@ verification/
 ├── spanning-tree-verification.txt
 ├── ipv6-verification.txt
 ├── aaa-verification.txt
-└── port-security-verification.txt
+├── port-security-verification.txt
+├── dhcp-snooping-verification.txt
+└── dai-verification.txt
 ```
 
 Additional evidence planned as the lab is expanded and validated:
@@ -478,6 +570,15 @@ The verification evidence is intended to demonstrate practical understanding of:
 - Secure MAC address control
 - Port Security violation modes
 - Err-disabled interface recovery
+- DHCP Snooping
+- DHCP Snooping binding-table validation
+- Trusted and untrusted DHCP port design
+- DHCP rate limiting
+- Rogue DHCP server protection
+- Dynamic ARP Inspection
+- DAI trust boundaries
+- ARP validation using DHCP Snooping bindings
+- Forged ARP protection
 - SNMP
 - Syslog
 - NTP
